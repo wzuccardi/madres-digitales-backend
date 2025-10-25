@@ -41,26 +41,52 @@ app.use(helmet({
 // CORS configuration - Configuración segura con whitelist específica
 app.use(cors({
   origin: function (origin, callback) {
-    // Lista de orígenes permitidos (agregar dominios del frontend actual)
+    // Lista de orígenes permitidos
     const allowedOrigins = [
       'http://localhost:3008',  // Frontend desarrollo
       'http://localhost:3000',  // Backend desarrollo
       'http://192.168.1.60:3008',  // IP local frontend
       'http://192.168.1.60:3000',  // IP local backend
       'http://localhost:3009',  // Dashboard monitoreo
-      // Agregar aquí los dominios de producción cuando se conozcan
     ];
     
-    // Permitir requests sin origin (herramientas de desarrollo como Postman)
-    if (!origin) return callback(null, true);
-    
-    // Verificar si el origen está en la lista permitida
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      return callback(null, true);
-    } else {
-      console.log('🚨 CORS: Origen no permitido:', origin);
-      return callback(new Error('No permitido por CORS'), false);
+    // Agregar dominios de producción desde variables de entorno
+    if (process.env.CORS_ORIGINS) {
+      const productionOrigins = process.env.CORS_ORIGINS.split(',').map(origin => origin.trim());
+      allowedOrigins.push(...productionOrigins);
     }
+    
+    // En producción, ser más permisivo si no hay origin específico
+    if (process.env.NODE_ENV === 'production') {
+      // Permitir dominios de Vercel y otros dominios de producción
+      const vercelDomains = [
+        /\.vercel\.app$/,
+        /\.vercel\.dev$/,
+        /^https:\/\/madres-digitales.*\.vercel\.app$/,
+        /^https:\/\/.*\.madres-digitales\.com$/
+      ];
+      
+      if (!origin) return callback(null, true);
+      
+      // Verificar si coincide con algún patrón de dominio permitido
+      const isAllowedDomain = allowedOrigins.includes(origin) ||
+        vercelDomains.some(domain => domain.test(origin));
+      
+      if (isAllowedDomain) {
+        return callback(null, true);
+      }
+    } else {
+      // Permitir requests sin origin (herramientas de desarrollo como Postman)
+      if (!origin) return callback(null, true);
+      
+      // Verificar si el origen está en la lista permitida
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        return callback(null, true);
+      }
+    }
+    
+    console.log('🚨 CORS: Origen no permitido:', origin);
+    return callback(new Error('No permitido por CORS'), false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
