@@ -17,6 +17,66 @@ export const getResumenGeneral = async (req: Request, res: Response) => {
     }
 };
 
+// Obtener lista de reportes disponibles
+export const getListaReportes = async (req: Request, res: Response) => {
+    try {
+        console.log('📊 Controller: Getting lista de reportes...');
+        
+        const reportes = [
+            {
+                id: 'resumen-general',
+                titulo: 'Resumen General',
+                descripcion: 'Resumen general del sistema',
+                url: 'http://localhost:54112/api/reportes/resumen-general',
+                fecha: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: 'estadisticas-gestantes',
+                titulo: 'Estadísticas de Gestantes',
+                descripcion: 'Estadísticas de gestantes por municipio',
+                url: 'http://localhost:54112/api/reportes/estadisticas-gestantes',
+                fecha: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: 'estadisticas-controles',
+                titulo: 'Estadísticas de Controles',
+                descripcion: 'Estadísticas de controles prenatales',
+                url: 'http://localhost:54112/api/reportes/estadisticas-controles',
+                fecha: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: 'estadisticas-alertas',
+                titulo: 'Estadísticas de Alertas',
+                descripcion: 'Estadísticas de alertas del sistema',
+                url: 'http://localhost:54112/api/reportes/estadisticas-alertas',
+                fecha: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: 'estadisticas-riesgo',
+                titulo: 'Estadísticas de Riesgo',
+                descripcion: 'Distribución de riesgo de gestantes',
+                url: 'http://localhost:54112/api/reportes/estadisticas-riesgo',
+                fecha: new Date().toISOString().split('T')[0]
+            },
+            {
+                id: 'tendencias',
+                titulo: 'Tendencias',
+                descripcion: 'Tendencias temporales del sistema',
+                url: 'http://localhost:54112/api/reportes/tendencias',
+                fecha: new Date().toISOString().split('T')[0]
+            }
+        ];
+        
+        res.json(reportes);
+    } catch (error) {
+        console.error('❌ Controller: Error getting lista de reportes:', error);
+        res.status(500).json({
+            error: 'Error al obtener lista de reportes',
+            details: error instanceof Error ? error.message : 'Error desconocido'
+        });
+    }
+};
+
 // Obtener estadísticas de gestantes
 export const getEstadisticasGestantes = async (req: Request, res: Response) => {
     try {

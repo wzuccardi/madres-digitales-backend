@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import {
     getResumenGeneral,
+    getListaReportes,
     getEstadisticasGestantes,
     getEstadisticasControles,
     getEstadisticasAlertas,
@@ -12,8 +13,8 @@ import { authMiddleware } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-// Ruta raíz para /api/reportes (redirige a resumen-general)
-router.get('/', authMiddleware, getResumenGeneral);
+// Ruta raíz para /api/reportes (devuelve lista de reportes disponibles)
+router.get('/', authMiddleware, getListaReportes);
 
 /**
  * @swagger
@@ -142,6 +143,14 @@ router.get('/estadisticas-riesgo', authMiddleware, getEstadisticasRiesgo);
  *         description: Error del servidor
  */
 router.get('/tendencias', authMiddleware, getTendencias);
+
+// Endpoints públicos para descargar reportes sin autenticación
+router.get('/descargar/resumen-general', getResumenGeneral);
+router.get('/descargar/estadisticas-gestantes', getEstadisticasGestantes);
+router.get('/descargar/estadisticas-controles', getEstadisticasControles);
+router.get('/descargar/estadisticas-alertas', getEstadisticasAlertas);
+router.get('/descargar/estadisticas-riesgo', getEstadisticasRiesgo);
+router.get('/descargar/tendencias', getTendencias);
 
 export default router;
 
