@@ -1,12 +1,20 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-// Rutas para reportes y estadísticas
-const express_1 = require("express");
-const reporte_controller_1 = require("../controllers/reporte.controller");
-const auth_middleware_1 = require("../middlewares/auth.middleware");
-const router = (0, express_1.Router)();
+import { Router } from 'express';
+import { authMiddleware } from '../middlewares/auth.middleware';
+import {
+  getListaReportes,
+  getResumenGeneral,
+  getEstadisticasGestantes,
+  getEstadisticasControles,
+  getEstadisticasAlertas,
+  getEstadisticasRiesgo,
+  getTendencias
+} from '../controllers/reporte.controller.new';
+
+const router = Router();
+
 // Ruta raíz para /api/reportes (devuelve lista de reportes disponibles)
-router.get('/', auth_middleware_1.authMiddleware, reporte_controller_1.getListaReportes);
+router.get('/', authMiddleware, getListaReportes);
+
 /**
  * @swagger
  * /api/reportes/resumen-general:
@@ -23,7 +31,8 @@ router.get('/', auth_middleware_1.authMiddleware, reporte_controller_1.getListaR
  *       500:
  *         description: Error del servidor
  */
-router.get('/resumen-general', auth_middleware_1.authMiddleware, reporte_controller_1.getResumenGeneral);
+router.get('/resumen-general', authMiddleware, getResumenGeneral);
+
 /**
  * @swagger
  * /api/reportes/estadisticas-gestantes:
@@ -34,13 +43,14 @@ router.get('/resumen-general', auth_middleware_1.authMiddleware, reporte_control
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Estadísticas obtenidas exitosamente
+ *         description: Estadísticas de gestantes obtenidas exitosamente
  *       401:
  *         description: No autorizado
  *       500:
  *         description: Error del servidor
  */
-router.get('/estadisticas-gestantes', auth_middleware_1.authMiddleware, reporte_controller_1.getEstadisticasGestantes);
+router.get('/estadisticas-gestantes', authMiddleware, getEstadisticasGestantes);
+
 /**
  * @swagger
  * /api/reportes/estadisticas-controles:
@@ -64,13 +74,14 @@ router.get('/estadisticas-gestantes', auth_middleware_1.authMiddleware, reporte_
  *         description: Fecha de fin del período (opcional)
  *     responses:
  *       200:
- *         description: Estadísticas obtenidas exitosamente
+ *         description: Estadísticas de controles obtenidas exitosamente
  *       401:
  *         description: No autorizado
  *       500:
  *         description: Error del servidor
  */
-router.get('/estadisticas-controles', auth_middleware_1.authMiddleware, reporte_controller_1.getEstadisticasControles);
+router.get('/estadisticas-controles', authMiddleware, getEstadisticasControles);
+
 /**
  * @swagger
  * /api/reportes/estadisticas-alertas:
@@ -81,13 +92,14 @@ router.get('/estadisticas-controles', auth_middleware_1.authMiddleware, reporte_
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Estadísticas obtenidas exitosamente
+ *         description: Estadísticas de alertas obtenidas exitosamente
  *       401:
  *         description: No autorizado
  *       500:
  *         description: Error del servidor
  */
-router.get('/estadisticas-alertas', auth_middleware_1.authMiddleware, reporte_controller_1.getEstadisticasAlertas);
+router.get('/estadisticas-alertas', authMiddleware, getEstadisticasAlertas);
+
 /**
  * @swagger
  * /api/reportes/estadisticas-riesgo:
@@ -98,13 +110,14 @@ router.get('/estadisticas-alertas', auth_middleware_1.authMiddleware, reporte_co
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Estadísticas obtenidas exitosamente
+ *         description: Estadísticas de riesgo obtenidas exitosamente
  *       401:
  *         description: No autorizado
  *       500:
  *         description: Error del servidor
  */
-router.get('/estadisticas-riesgo', auth_middleware_1.authMiddleware, reporte_controller_1.getEstadisticasRiesgo);
+router.get('/estadisticas-riesgo', authMiddleware, getEstadisticasRiesgo);
+
 /**
  * @swagger
  * /api/reportes/tendencias:
@@ -118,8 +131,10 @@ router.get('/estadisticas-riesgo', auth_middleware_1.authMiddleware, reporte_con
  *         name: meses
  *         schema:
  *           type: integer
+ *           minimum: 1
+ *           maximum: 24
  *           default: 6
- *         description: Número de meses a analizar
+ *         description: Número de meses a analizar (opcional, por defecto 6)
  *     responses:
  *       200:
  *         description: Tendencias obtenidas exitosamente
@@ -128,12 +143,14 @@ router.get('/estadisticas-riesgo', auth_middleware_1.authMiddleware, reporte_con
  *       500:
  *         description: Error del servidor
  */
-router.get('/tendencias', auth_middleware_1.authMiddleware, reporte_controller_1.getTendencias);
+router.get('/tendencias', authMiddleware, getTendencias);
+
 // Endpoints públicos para descargar reportes sin autenticación
-router.get('/descargar/resumen-general', reporte_controller_1.getResumenGeneral);
-router.get('/descargar/estadisticas-gestantes', reporte_controller_1.getEstadisticasGestantes);
-router.get('/descargar/estadisticas-controles', reporte_controller_1.getEstadisticasControles);
-router.get('/descargar/estadisticas-alertas', reporte_controller_1.getEstadisticasAlertas);
-router.get('/descargar/estadisticas-riesgo', reporte_controller_1.getEstadisticasRiesgo);
-router.get('/descargar/tendencias', reporte_controller_1.getTendencias);
-exports.default = router;
+router.get('/descargar/resumen-general', getResumenGeneral);
+router.get('/descargar/estadisticas-gestantes', getEstadisticasGestantes);
+router.get('/descargar/estadisticas-controles', getEstadisticasControles);
+router.get('/descargar/estadisticas-alertas', getEstadisticasAlertas);
+router.get('/descargar/estadisticas-riesgo', getEstadisticasRiesgo);
+router.get('/descargar/tendencias', getTendencias);
+
+export default router;

@@ -41,14 +41,41 @@ const register = async (req, res) => {
             return res.status(400).json({ error: error.details[0].message });
         }
         const userData = value;
-        // Validar permisos para crear super_admin, admin o coordinador
+        // Validar permisos para crear usuarios según los requisitos
         const user = req.user;
-        if (userData.rol === 'super_admin' || userData.rol === 'admin' || userData.rol === 'coordinador') {
-            // Solo super_admin puede crear estos roles
+        // Solo super admin puede crear usuarios con rol super_admin
+        if (userData.rol === 'super_admin') {
             if (!user || user.rol !== 'super_admin') {
                 return res.status(403).json({
                     success: false,
-                    error: 'Solo el super administrador puede crear usuarios con rol super_admin, admin o coordinador'
+                    error: 'Solo el super administrador puede crear usuarios con rol super_admin'
+                });
+            }
+        }
+        // Solo super admin y admin pueden crear usuarios con rol admin
+        if (userData.rol === 'admin') {
+            if (!user || (user.rol !== 'super_admin' && user.rol !== 'admin')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Solo el super administrador o administrador pueden crear usuarios con rol admin'
+                });
+            }
+        }
+        // Solo super admin y admin pueden crear usuarios con rol coordinador
+        if (userData.rol === 'coordinador') {
+            if (!user || (user.rol !== 'super_admin' && user.rol !== 'admin')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Solo el super administrador o administrador pueden crear usuarios con rol coordinador'
+                });
+            }
+        }
+        // Super admin, admin y madrinas pueden crear usuarios con rol madrina
+        if (userData.rol === 'madrina') {
+            if (!user || (user.rol !== 'super_admin' && user.rol !== 'admin' && user.rol !== 'madrina')) {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Solo el super administrador, administrador o madrinas pueden crear usuarios con rol madrina'
                 });
             }
         }

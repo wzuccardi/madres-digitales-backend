@@ -1,0 +1,13 @@
+node_modules
+.env.local
+.env.development
+.env.test
+src/
+prisma/migrations/
+uploads/
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.tmp
+*.temp

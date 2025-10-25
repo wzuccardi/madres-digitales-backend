@@ -1,5 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+// Importar el cliente de Prisma con mapeo de nombres corregido
+import prisma from './prisma-fix';
 
 export default prisma;

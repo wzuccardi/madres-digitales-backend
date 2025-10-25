@@ -13,7 +13,7 @@ import assignmentRoutes from './assignment.routes';
 import smartAlertsRoutes from './smart-alerts.routes';
 import alertasAutomaticasRoutes from './alertas-automaticas.routes';
 import alertasTestRoutes from './alertas-test.routes';
-import reportesRoutes from './reportes.routes';
+import reportesRoutes from './reportes.routes.new';
 import ipsCrudRoutes from './ips-crud.routes';
 import medicoCrudRoutes from './medico-crud.routes';
 import adminRoutes from './admin.routes';

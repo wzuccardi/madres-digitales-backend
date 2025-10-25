@@ -59,10 +59,10 @@ router.get('/destacado', contenidoController.obtenerDestacado);
 /**
  * POST /api/contenido
  * Crear contenido educativo
- * Requiere rol: Coordinador o superior
+ * Requiere rol: Admin o superior
  * Soporta subida de archivo con campo 'archivo'
  */
-router.post('/', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireMinRole)(role_middleware_1.UsuarioRol.COORDINADOR), file_utils_1.upload.single('archivo'), contenidoController.crearContenido);
+router.post('/', auth_middleware_1.authMiddleware, (0, role_middleware_1.requireMinRole)(role_middleware_1.UsuarioRol.ADMIN), file_utils_1.upload.single('archivo'), contenidoController.crearContenido);
 /**
  * GET /api/contenido/favoritos
  * Obtener favoritos del usuario (requiere autenticación)

@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "exclude": [
+    "src/scripts/**/*",
+    "src/services/mensaje.service.ts",
+    "src/services/notification.service.ts",
+    "src/services/permission.service.ts",
+    "src/services/refresh-token.service.ts",
+    "src/services/reporte.service.ts",
+    "src/services/scoring.service.ts",
+    "src/services/smart-alerts.service.ts",
+    "src/services/sync.service.ts",
+    "src/services/token.service.ts",
+    "src/utils/auth.utils.ts"
+  ]
+}

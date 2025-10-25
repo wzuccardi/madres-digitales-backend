@@ -24,8 +24,17 @@ export const crearContenido = async (
 ) => {
   try {
     const userId = req.user?.id;
+    const userRole = req.user?.rol;
+    
     if (!userId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+    
+    // Verificar permisos: solo super admin y admin pueden crear contenidos
+    if (userRole !== 'super_admin' && userRole !== 'admin') {
+      return res.status(403).json({
+        error: 'Solo el super administrador o administrador pueden crear contenidos educativos'
+      });
     }
 
     // Si hay archivo subido, usar su información

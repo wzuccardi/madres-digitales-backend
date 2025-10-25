@@ -1,5 +1,8 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
-exports.default = prisma;
+// Importar el cliente de Prisma con mapeo de nombres corregido
+const prisma_fix_1 = __importDefault(require("./prisma-fix"));
+exports.default = prisma_fix_1.default;

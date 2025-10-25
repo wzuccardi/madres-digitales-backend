@@ -288,11 +288,11 @@ export const activarMunicipio = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
 
-    // Verificar permisos de super admin o admin
-    if (user.rol !== 'super_admin' && user.rol !== 'admin') {
+    // Verificar permisos de super admin únicamente
+    if (user.rol !== 'super_admin') {
       return res.status(403).json({
         success: false,
-        error: 'Solo el super administrador o administrador puede activar municipios',
+        error: 'Solo el super administrador puede activar municipios',
       });
     }
 
@@ -338,11 +338,11 @@ export const desactivarMunicipio = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
 
-    // Verificar permisos de super admin o admin
-    if (user.rol !== 'super_admin' && user.rol !== 'admin') {
+    // Verificar permisos de super admin únicamente
+    if (user.rol !== 'super_admin') {
       return res.status(403).json({
         success: false,
-        error: 'Solo el super administrador o administrador puede desactivar municipios',
+        error: 'Solo el super administrador puede desactivar municipios',
       });
     }
 
@@ -596,11 +596,11 @@ export const importarMunicipiosBolivar = async (req: Request, res: Response) => 
   try {
     const user = (req as any).user;
 
-    // Verificar permisos de super admin o admin
-    if (user.rol !== 'super_admin' && user.rol !== 'admin') {
+    // Verificar permisos de super admin únicamente
+    if (user.rol !== 'super_admin') {
       return res.status(403).json({
         success: false,
-        error: 'Solo el super administrador o administrador puede importar municipios',
+        error: 'Solo el super administrador puede importar municipios',
       });
     }
 

@@ -24,6 +24,7 @@ export enum CategoriaContenido {
   EJERCICIO = 'ejercicio',
   HIGIENE = 'higiene',
   DERECHOS = 'derechos',
+  EDUCACION = 'educacion',
   OTROS = 'otros',
 }
 
@@ -40,7 +41,7 @@ export const crearContenidoSchema = z.object({
   titulo: z.string().min(1).max(200),
   descripcion: z.string().min(1),
   tipo: z.enum(['video', 'audio', 'documento', 'imagen', 'articulo', 'infografia']),
-  categoria: z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'otros']),
+  categoria: z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'educacion', 'otros']),
   nivel: z.enum(['basico', 'intermedio', 'avanzado']).default('basico'),
   archivoUrl: z.string().optional(), // Opcional cuando se sube archivo
   archivoNombre: z.string().optional(),
@@ -89,7 +90,7 @@ export const actualizarContenidoSchema = z.object({
   titulo: z.string().min(1).max(200).optional(),
   descripcion: z.string().min(1).optional(),
   tipo: z.enum(['video', 'audio', 'documento', 'imagen', 'articulo', 'infografia']).optional(),
-  categoria: z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'otros']).optional(),
+  categoria: z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'educacion', 'otros']).optional(),
   nivel: z.enum(['basico', 'intermedio', 'avanzado']).optional(),
   archivoUrl: z.string().url().optional(),
   archivoNombre: z.string().optional(),
@@ -112,7 +113,7 @@ export type ActualizarContenidoDTO = z.infer<typeof actualizarContenidoSchema>;
 export const buscarContenidoSchema = z.object({
   query: z.string().optional(),
   tipo: z.enum(['video', 'audio', 'documento', 'imagen', 'articulo', 'infografia']).optional(),
-  categoria: z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'otros']).optional(),
+  categoria: z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'educacion', 'otros']).optional(),
   nivel: z.enum(['basico', 'intermedio', 'avanzado']).optional(),
   etiquetas: z.array(z.string()).optional(),
   destacado: z.boolean().optional(),

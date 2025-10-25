@@ -27,6 +27,7 @@ var CategoriaContenido;
     CategoriaContenido["EJERCICIO"] = "ejercicio";
     CategoriaContenido["HIGIENE"] = "higiene";
     CategoriaContenido["DERECHOS"] = "derechos";
+    CategoriaContenido["EDUCACION"] = "educacion";
     CategoriaContenido["OTROS"] = "otros";
 })(CategoriaContenido || (exports.CategoriaContenido = CategoriaContenido = {}));
 var NivelDificultad;
@@ -42,7 +43,7 @@ exports.crearContenidoSchema = zod_1.z.object({
     titulo: zod_1.z.string().min(1).max(200),
     descripcion: zod_1.z.string().min(1),
     tipo: zod_1.z.enum(['video', 'audio', 'documento', 'imagen', 'articulo', 'infografia']),
-    categoria: zod_1.z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'otros']),
+    categoria: zod_1.z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'educacion', 'otros']),
     nivel: zod_1.z.enum(['basico', 'intermedio', 'avanzado']).default('basico'),
     archivoUrl: zod_1.z.string().optional(), // Opcional cuando se sube archivo
     archivoNombre: zod_1.z.string().optional(),
@@ -93,7 +94,7 @@ exports.actualizarContenidoSchema = zod_1.z.object({
     titulo: zod_1.z.string().min(1).max(200).optional(),
     descripcion: zod_1.z.string().min(1).optional(),
     tipo: zod_1.z.enum(['video', 'audio', 'documento', 'imagen', 'articulo', 'infografia']).optional(),
-    categoria: zod_1.z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'otros']).optional(),
+    categoria: zod_1.z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'educacion', 'otros']).optional(),
     nivel: zod_1.z.enum(['basico', 'intermedio', 'avanzado']).optional(),
     archivoUrl: zod_1.z.string().url().optional(),
     archivoNombre: zod_1.z.string().optional(),
@@ -113,7 +114,7 @@ exports.actualizarContenidoSchema = zod_1.z.object({
 exports.buscarContenidoSchema = zod_1.z.object({
     query: zod_1.z.string().optional(),
     tipo: zod_1.z.enum(['video', 'audio', 'documento', 'imagen', 'articulo', 'infografia']).optional(),
-    categoria: zod_1.z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'otros']).optional(),
+    categoria: zod_1.z.enum(['nutricion', 'cuidado_prenatal', 'signos_alarma', 'lactancia', 'parto', 'posparto', 'planificacion', 'salud_mental', 'ejercicio', 'higiene', 'derechos', 'educacion', 'otros']).optional(),
     nivel: zod_1.z.enum(['basico', 'intermedio', 'avanzado']).optional(),
     etiquetas: zod_1.z.array(zod_1.z.string()).optional(),
     destacado: zod_1.z.boolean().optional(),

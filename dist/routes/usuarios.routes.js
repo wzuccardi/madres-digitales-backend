@@ -12,7 +12,4 @@ router.get('/municipio/:municipioId', usuario_controller_1.getUsuariosByMunicipi
 // Rutas básicas
 router.get('/', usuario_controller_1.getAllUsuarios);
 router.get('/:id', usuario_controller_1.getUsuarioById);
-router.post('/', usuario_controller_1.createUsuario);
-router.put('/:id', usuario_controller_1.updateUsuario);
-router.delete('/:id', usuario_controller_1.deleteUsuario);
 exports.default = router;

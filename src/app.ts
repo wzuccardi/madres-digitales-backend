@@ -48,6 +48,7 @@ app.use(cors({
       'http://192.168.1.60:3008',  // IP local frontend
       'http://192.168.1.60:3000',  // IP local backend
       'http://localhost:3009',  // Dashboard monitoreo
+      'http://localhost:52638',  // Puerto dinámico para hot reload
       'https://madresdigitales.netlify.app',  // Dominio de producción Netlify
     ];
     

@@ -262,11 +262,11 @@ const activarMunicipio = async (req, res) => {
     try {
         const { id } = req.params;
         const user = req.user;
-        // Verificar permisos de super admin o admin
-        if (user.rol !== 'super_admin' && user.rol !== 'admin') {
+        // Verificar permisos de super admin únicamente
+        if (user.rol !== 'super_admin') {
             return res.status(403).json({
                 success: false,
-                error: 'Solo el super administrador o administrador puede activar municipios',
+                error: 'Solo el super administrador puede activar municipios',
             });
         }
         console.log('✅ MunicipiosController: Activando municipio:', id);
@@ -306,11 +306,11 @@ const desactivarMunicipio = async (req, res) => {
     try {
         const { id } = req.params;
         const user = req.user;
-        // Verificar permisos de super admin o admin
-        if (user.rol !== 'super_admin' && user.rol !== 'admin') {
+        // Verificar permisos de super admin únicamente
+        if (user.rol !== 'super_admin') {
             return res.status(403).json({
                 success: false,
-                error: 'Solo el super administrador o administrador puede desactivar municipios',
+                error: 'Solo el super administrador puede desactivar municipios',
             });
         }
         console.log('❌ MunicipiosController: Desactivando municipio:', id);
@@ -533,11 +533,11 @@ exports.buscarIPSCercanas = buscarIPSCercanas;
 const importarMunicipiosBolivar = async (req, res) => {
     try {
         const user = req.user;
-        // Verificar permisos de super admin o admin
-        if (user.rol !== 'super_admin' && user.rol !== 'admin') {
+        // Verificar permisos de super admin únicamente
+        if (user.rol !== 'super_admin') {
             return res.status(403).json({
                 success: false,
-                error: 'Solo el super administrador o administrador puede importar municipios',
+                error: 'Solo el super administrador puede importar municipios',
             });
         }
         console.log('📥 MunicipiosController: Iniciando importación de municipios de Bolívar...');

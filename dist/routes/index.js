@@ -18,7 +18,7 @@ const assignment_routes_1 = __importDefault(require("./assignment.routes"));
 const smart_alerts_routes_1 = __importDefault(require("./smart-alerts.routes"));
 const alertas_automaticas_routes_1 = __importDefault(require("./alertas-automaticas.routes"));
 const alertas_test_routes_1 = __importDefault(require("./alertas-test.routes"));
-const reportes_routes_1 = __importDefault(require("./reportes.routes"));
+const reportes_routes_new_1 = __importDefault(require("./reportes.routes.new"));
 const ips_crud_routes_1 = __importDefault(require("./ips-crud.routes"));
 const medico_crud_routes_1 = __importDefault(require("./medico-crud.routes"));
 const admin_routes_1 = __importDefault(require("./admin.routes"));
@@ -59,7 +59,7 @@ router.use('/alertas-automaticas', alertas_automaticas_routes_1.default);
 // Rutas de prueba para alertas automáticas
 router.use('/alertas-test', alertas_test_routes_1.default);
 // Rutas de reportes y estadísticas
-router.use('/reportes', reportes_routes_1.default);
+router.use('/reportes', reportes_routes_new_1.default);
 // Rutas CRUD de IPS
 router.use('/ips-crud', ips_crud_routes_1.default);
 // Rutas CRUD de Médicos
