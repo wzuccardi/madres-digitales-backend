@@ -48,6 +48,7 @@ app.use(cors({
       'http://192.168.1.60:3008',  // IP local frontend
       'http://192.168.1.60:3000',  // IP local backend
       'http://localhost:3009',  // Dashboard monitoreo
+      'https://madresdigitales.netlify.app',  // Dominio de producción Netlify
     ];
     
     // Agregar dominios de producción desde variables de entorno
@@ -58,19 +59,21 @@ app.use(cors({
     
     // En producción, ser más permisivo si no hay origin específico
     if (process.env.NODE_ENV === 'production') {
-      // Permitir dominios de Vercel y otros dominios de producción
-      const vercelDomains = [
+      // Permitir dominios de Vercel, Netlify y otros dominios de producción
+      const productionDomains = [
         /\.vercel\.app$/,
         /\.vercel\.dev$/,
+        /\.netlify\.app$/,
         /^https:\/\/madres-digitales.*\.vercel\.app$/,
-        /^https:\/\/.*\.madres-digitales\.com$/
+        /^https:\/\/.*\.madres-digitales\.com$/,
+        /^https:\/\/madresdigitales\.netlify\.app$/
       ];
       
       if (!origin) return callback(null, true);
       
       // Verificar si coincide con algún patrón de dominio permitido
       const isAllowedDomain = allowedOrigins.includes(origin) ||
-        vercelDomains.some(domain => domain.test(origin));
+        productionDomains.some(domain => domain.test(origin));
       
       if (isAllowedDomain) {
         return callback(null, true);
