@@ -1,0 +1,459 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model alertas {
+  id                     String                   @id
+  gestante_id            String
+  madrina_id             String?
+  medico_asignado_id     String?
+  ips_derivada_id        String?
+  tipo_alerta            String
+  nivel_prioridad        String
+  mensaje                String
+  sintomas               Json?
+  coordenadas_alerta     Json?
+  resuelta               Boolean                  @default(false)
+  fecha_resolucion       DateTime?
+  generado_por_id        String?
+  fecha_creacion         DateTime                 @default(now())
+  fecha_actualizacion    DateTime
+  created_at             DateTime                 @default(now())
+  estado                 String?                  @default("pendiente")
+  es_automatica          Boolean                  @default(false)
+  score_riesgo           Int?
+  gestantes              gestantes                @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
+  usuarios               usuarios?                @relation(fields: [madrina_id], references: [id])
+  seguimiento_emergencia seguimiento_emergencia[]
+}
+
+model contactos_emergencia {
+  id                  String    @id
+  gestante_id         String
+  nombre              String
+  parentesco          String?
+  telefono            String
+  email               String?
+  activo              Boolean   @default(true)
+  fecha_creacion      DateTime  @default(now())
+  fecha_actualizacion DateTime
+  gestantes           gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
+}
+
+model contenidos {
+  id                         String               @id
+  titulo                     String
+  descripcion                String?
+  categoria                  String
+  url_contenido              String?
+  url_imagen                 String?
+  duracion_minutos           Int?
+  activo                     Boolean              @default(true)
+  fecha_creacion             DateTime             @default(now())
+  fecha_actualizacion        DateTime
+  destacado                  Boolean              @default(false)
+  destacadoEnSemanaGestacion Boolean?             @default(false)
+  nivel                      String?
+  semana_gestacion_fin       Int?
+  semana_gestacion_inicio    Int?
+  tags                       Json?
+  tipo                       String
+  url_video                  String?
+  progreso_contenido         progreso_contenido[]
+}
+
+model control_prenatal {
+  id                      String    @id
+  gestante_id             String
+  medico_id               String?
+  fecha_control           DateTime
+  semanas_gestacion       Int?
+  peso                    Float?
+  altura_uterina          Float?
+  presion_sistolica       Int?
+  presion_diastolica      Int?
+  frecuencia_cardiaca     Int?
+  frecuencia_respiratoria Int?
+  temperatura             Float?
+  movimientos_fetales     String?
+  edemas                  String?
+  proteinuria             String?
+  glucosuria              String?
+  hallazgos               Json?
+  recomendaciones         String?
+  proximo_control         DateTime?
+  realizado               Boolean   @default(false)
+  observaciones           String?
+  examenes_solicitados    Json?
+  resultados_examenes     Json?
+  fecha_creacion          DateTime  @default(now())
+  fecha_actualizacion     DateTime
+}
+
+model controles {
+  id                      String    @id
+  gestante_id             String
+  medico_id               String?
+  fecha_control           DateTime
+  semanas_gestacion       Int?
+  peso                    Float?
+  altura_uterina          Float?
+  presion_sistolica       Int?
+  presion_diastolica      Int?
+  frecuencia_cardiaca     Int?
+  frecuencia_respiratoria Int?
+  temperatura             Float?
+  movimientos_fetales     String?
+  edemas                  String?
+  proteinuria             String?
+  glucosuria              String?
+  hallazgos               Json?
+  recomendaciones         String?
+  proximo_control         DateTime?
+  realizado               Boolean   @default(false)
+  fecha_creacion          DateTime  @default(now())
+  fecha_actualizacion     DateTime
+  gestantes               gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
+  medicos                 medicos?  @relation(fields: [medico_id], references: [id])
+}
+
+model conversaciones {
+  id                   String     @id
+  tipo                 String
+  nombre               String?
+  descripcion          String?
+  participantes        Json
+  activa               Boolean    @default(true)
+  ultimo_mensaje_id    String?
+  fecha_ultimo_mensaje DateTime?
+  fecha_creacion       DateTime   @default(now())
+  fecha_actualizacion  DateTime
+  mensajes             mensajes[]
+}
+
+model dispositivos {
+  id                  String    @id
+  usuario_id          String
+  device_id           String    @unique
+  device_name         String?
+  platform            String?
+  app_version         String?
+  last_sync           DateTime?
+  activo              Boolean   @default(true)
+  fecha_creacion      DateTime  @default(now())
+  fecha_actualizacion DateTime
+}
+
+model entity_versions {
+  id                  String   @id
+  entidad             String
+  entidad_id          String
+  version             Int      @default(1)
+  checksum            String?
+  fecha_creacion      DateTime @default(now())
+  fecha_actualizacion DateTime
+
+  @@unique([entidad, entidad_id])
+}
+
+model gestantes {
+  id                        String                   @id
+  documento                 String?
+  tipo_documento            String?
+  nombre                    String
+  fecha_nacimiento          DateTime
+  telefono                  String?
+  direccion                 String?
+  coordenadas               Json?
+  fecha_ultima_menstruacion DateTime?
+  fecha_probable_parto      DateTime?
+  eps                       String?
+  regimen_salud             String
+  municipio_id              String?
+  madrina_id                String?
+  medico_tratante_id        String?
+  ips_asignada_id           String?
+  activa                    Boolean                  @default(true)
+  fecha_creacion            DateTime                 @default(now())
+  fecha_actualizacion       DateTime
+  riesgo_alto               Boolean                  @default(false)
+  alertas                   alertas[]
+  contactos_emergencia      contactos_emergencia[]
+  controles                 controles[]
+  ips                       ips?                     @relation(fields: [ips_asignada_id], references: [id])
+  usuarios                  usuarios?                @relation(fields: [madrina_id], references: [id])
+  medicos                   medicos?                 @relation(fields: [medico_tratante_id], references: [id])
+  municipios                municipios?              @relation(fields: [municipio_id], references: [id])
+  seguimiento_emergencia    seguimiento_emergencia[]
+}
+
+model ips {
+  id                  String      @id
+  nombre              String
+  nit                 String?
+  telefono            String?
+  direccion           String?
+  municipio_id        String?
+  nivel               String?
+  email               String?
+  activo              Boolean     @default(true)
+  fecha_creacion      DateTime    @default(now())
+  fecha_actualizacion DateTime
+  latitud             Decimal?    @db.Decimal(10, 8)
+  longitud            Decimal?    @db.Decimal(11, 8)
+  gestantes           gestantes[]
+  municipios          municipios? @relation(fields: [municipio_id], references: [id])
+  medicos             medicos[]
+}
+
+model logs {
+  id             String   @id
+  tipo           String
+  mensaje        String
+  datos          Json?
+  nivel          String
+  usuario_id     String?
+  fecha_creacion DateTime @default(now())
+}
+
+model medicos {
+  id                  String      @id
+  nombre              String
+  documento           String?
+  telefono            String?
+  especialidad        String?
+  email               String?
+  registro_medico     String?
+  ips_id              String?
+  municipio_id        String?
+  activo              Boolean     @default(true)
+  fecha_creacion      DateTime    @default(now())
+  fecha_actualizacion DateTime
+  tipo_documento      String?     @default("cedula")
+  controles           controles[]
+  gestantes           gestantes[]
+  ips                 ips?        @relation(fields: [ips_id], references: [id])
+  municipios          municipios? @relation(fields: [municipio_id], references: [id])
+}
+
+model mensajes {
+  id                  String         @id
+  conversacion_id     String
+  remitente_id        String
+  contenido           String
+  tipo                String         @default("texto")
+  archivo_url         String?
+  metadata            Json?
+  leido               Boolean        @default(false)
+  fecha_lectura       DateTime?
+  fecha_creacion      DateTime       @default(now())
+  fecha_actualizacion DateTime
+  conversaciones      conversaciones @relation(fields: [conversacion_id], references: [id], onDelete: Cascade)
+}
+
+model municipios {
+  id                  String            @id
+  nombre              String
+  departamento        String
+  codigo_dane         String?
+  latitud             Decimal?          @db.Decimal(10, 8)
+  longitud            Decimal?          @db.Decimal(11, 8)
+  poblacion           Int?
+  area_km2            Decimal?          @db.Decimal(10, 2)
+  altitud_msnm        Int?
+  es_capital          Boolean           @default(false)
+  activo              Boolean           @default(true)
+  fecha_creacion      DateTime          @default(now())
+  fecha_actualizacion DateTime
+  gestantes           gestantes[]
+  ips                 ips[]
+  medicos             medicos[]
+  usuarios            usuarios[]
+  zonas_cobertura     zonas_cobertura[]
+}
+
+model progreso_contenido {
+  id                  String     @id
+  usuario_id          String
+  contenido_id        String
+  completado          Boolean    @default(false)
+  porcentaje_progreso Int        @default(0)
+  tiempo_visto        Int?
+  fecha_inicio        DateTime?
+  fecha_completado    DateTime?
+  fecha_creacion      DateTime   @default(now())
+  fecha_actualizacion DateTime
+  contenidos          contenidos @relation(fields: [contenido_id], references: [id], onDelete: Cascade)
+
+  @@unique([usuario_id, contenido_id])
+}
+
+model refresh_tokens {
+  id         String    @id
+  token      String    @unique
+  usuario_id String
+  device_id  String?
+  expires_at DateTime
+  revoked    Boolean   @default(false)
+  revoked_at DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime
+}
+
+model seguimiento_emergencia {
+  id                      String    @id
+  alerta_id               String
+  gestante_id             String
+  tipo                    String
+  estado                  String
+  notificaciones_enviadas Int       @default(0)
+  detalles_notificaciones Json?
+  observaciones           String?
+  fecha_creacion          DateTime  @default(now())
+  fecha_actualizacion     DateTime
+  alertas                 alertas   @relation(fields: [alerta_id], references: [id], onDelete: Cascade)
+  gestantes               gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model spatial_ref_sys {
+  srid      Int     @id
+  auth_name String? @db.VarChar(256)
+  auth_srid Int?
+  srtext    String? @db.VarChar(2048)
+  proj4text String? @db.VarChar(2048)
+}
+
+model sync_conflicts {
+  id               String    @id
+  entidad          String
+  entidad_id       String
+  usuario_id       String
+  device_id        String
+  datos_local      Json
+  datos_servidor   Json
+  tipo_conflicto   String
+  estado           String    @default("pending")
+  resolucion       Json?
+  fecha_creacion   DateTime  @default(now())
+  fecha_resolucion DateTime?
+}
+
+model sync_logs {
+  id             String    @id
+  usuario_id     String?
+  device_id      String?
+  tipo_operacion String
+  entidad        String
+  entidad_id     String?
+  estado         String
+  detalles       Json?
+  error_message  String?
+  fecha_inicio   DateTime  @default(now())
+  fecha_fin      DateTime?
+  duracion_ms    Int?
+}
+
+model sync_queue {
+  id                  String    @id
+  usuario_id          String
+  device_id           String
+  entidad             String
+  entidad_id          String
+  operacion           String
+  datos               Json
+  prioridad           Int       @default(1)
+  intentos            Int       @default(0)
+  max_intentos        Int       @default(3)
+  estado              String    @default("pending")
+  error_message       String?
+  fecha_creacion      DateTime  @default(now())
+  fecha_procesamiento DateTime?
+}
+
+model usuarios {
+  id                  String      @id
+  nombre              String
+  email               String      @unique
+  password_hash       String
+  documento           String?
+  tipo_documento      String?     @default("cedula")
+  rol                 String
+  municipio_id        String?
+  telefono            String?
+  activo              Boolean     @default(true)
+  ultimo_acceso       DateTime?
+  refresh_token       String?
+  fecha_creacion      DateTime    @default(now())
+  fecha_actualizacion DateTime
+  alertas             alertas[]
+  gestantes           gestantes[]
+  municipios          municipios? @relation(fields: [municipio_id], references: [id])
+}
+
+model zonas_cobertura {
+  id                   String      @id
+  nombre               String
+  descripcion          String?
+  tipo                 String
+  centro_latitud       Decimal?    @db.Decimal(10, 8)
+  centro_longitud      Decimal?    @db.Decimal(11, 8)
+  radio_km             Float?
+  coordenadas_poligono Json?
+  municipio_id         String?
+  activa               Boolean     @default(true)
+  fecha_creacion       DateTime    @default(now())
+  fecha_actualizacion  DateTime
+  municipios           municipios? @relation(fields: [municipio_id], references: [id])
+}
+
+enum alerta_tipo {
+  SOS
+  MEDICA
+  CONTROL
+  RECORDATORIO
+  HIPERTENSION
+  PREECLAMPSIA
+  DIABETES
+  SANGRADO
+  CONTRACCIONES
+  FALTA_MOVIMIENTO_FETAL
+}
+
+enum categoria_contenido {
+  NUTRICION
+  EJERCICIO
+  CUIDADOS_PRENATALES
+  PREPARACION_PARTO
+  LACTANCIA
+  CUIDADOS_BEBE
+  SALUD_MENTAL
+  EMERGENCIAS
+}
+
+enum nivel_dificultad {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+}
+
+enum prioridad_nivel {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum tipo_contenido {
+  VIDEO
+  ARTICULO
+  INFOGRAFIA
+  PODCAST
+  EJERCICIO
+  RECETA
+}

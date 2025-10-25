@@ -1,0 +1,26 @@
+﻿// Archivo: src/middlewares/rate-limit.middleware.ts
+import rateLimit from 'express-rate-limit';
+
+// Rate limiting bÃ¡sico para endpoints crÃ­ticos
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // MÃ¡ximo 10 intentos por ventana
+  message: {
+    success: false,
+    error: 'Demasiados intentos de autenticaciÃ³n. Por favor intente mÃ¡s tarde.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Rate limiting menos restrictivo para endpoints generales
+export const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100, // MÃ¡ximo 100 peticiones por ventana
+  message: {
+    success: false,
+    error: 'Demasiadas peticiones. Por favor reduzca la frecuencia.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

@@ -1,0 +1,37 @@
+# ========================================
+# Dockerfile Backend - Desarrollo
+# Madres Digitales
+# ========================================
+
+FROM node:20-alpine
+
+# Instalar dependencias adicionales para desarrollo
+RUN apk add --no-cache \
+    curl \
+    bash \
+    git \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+# Copiar archivos de package management
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar código fuente
+COPY . .
+
+# Generar cliente Prisma
+RUN npx prisma generate
+
+# Exponer puerto
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3000/health || exit 1
+
+# Iniciar aplicación en modo desarrollo
+CMD ["npm", "run", "dev"]
