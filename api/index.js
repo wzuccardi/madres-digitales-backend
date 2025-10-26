@@ -440,6 +440,9 @@ app.get('/api/database/status', async (req, res) => {
 // Controles endpoint - REQUIRED BY FLUTTER APP
 app.get('/api/controles', async (req, res) => {
   try {
+    console.log('🩺 DEBUG: /api/controles endpoint llamado');
+    console.log('🩺 DEBUG: Headers:', req.headers);
+    console.log('🩺 DEBUG: Query params:', req.query);
     console.log('🩺 Obteniendo controles prenatales...');
 
     const controles = await prisma.control_prenatal.findMany({
@@ -496,10 +499,72 @@ app.get('/api/controles', async (req, res) => {
   }
 });
 
+// Controles endpoint - ALIAS FOR CONSISTENCY WITH FRONTEND
+app.get('/api/controles-prenatales', async (req, res) => {
+  try {
+    console.log('🩺 Obteniendo controles prenatales (alias)...');
+
+    const controles = await prisma.control_prenatal.findMany({
+      include: {
+        gestante: {
+          select: {
+            nombre: true,
+            documento: true
+          }
+        },
+        medico: {
+          select: {
+            nombre: true,
+            especialidad: true
+          }
+        }
+      },
+      orderBy: { fecha_control: 'desc' }
+    });
+
+    const controlesFormateados = controles.map(control => ({
+      id: control.id,
+      gestante: {
+        nombre: control.gestante.nombre,
+        documento: control.gestante.documento
+      },
+      medico: control.medico ? {
+        nombre: control.medico.nombre,
+        especialidad: control.medico.especialidad
+      } : null,
+      fechaControl: control.fecha_control.toISOString().split('T')[0],
+      semanasGestacion: control.semanas_gestacion,
+      peso: control.peso,
+      alturaUterina: control.altura_uterina,
+      presionSistolica: control.presion_sistolica,
+      presionDiastolica: control.presion_diastolica,
+      realizado: control.realizado,
+      recomendaciones: control.recomendaciones,
+      proximoControl: control.proximo_control ? control.proximo_control.toISOString().split('T')[0] : null
+    }));
+
+    console.log(`🩺 Encontrados ${controlesFormateados.length} controles (alias)`);
+
+    res.json({
+      success: true,
+      data: controlesFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo controles (alias):', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo controles: ' + error.message
+    });
+  }
+});
+
 // Contenido CRUD endpoint - REQUIRED BY FLUTTER APP
 app.get('/api/contenido-crud', async (req, res) => {
   try {
     const { categoria } = req.query;
+    console.log('📚 DEBUG: /api/contenido-crud endpoint llamado');
+    console.log('📚 DEBUG: Headers:', req.headers);
+    console.log('📚 DEBUG: Query params:', req.query);
     console.log('📚 Obteniendo contenido, categoría:', categoria);
 
     const whereClause = categoria ? { categoria: categoria.toUpperCase() } : {};
