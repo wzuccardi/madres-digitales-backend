@@ -102,7 +102,7 @@ export const crearGestanteCompletaSchema = z.object({
     .optional()
     .nullable(),
   
-  medico_asignado_id: z.string()
+  medico_tratante_id: z.string()
     .uuid('El ID del médico debe ser un UUID válido')
     .optional()
     .nullable(),

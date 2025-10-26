@@ -40,7 +40,8 @@ export interface DatosClinicosDTO {
  */
 export interface CrearControlConEvaluacionDTO extends DatosClinicosDTO {
   gestante_id: string;
-  realizado_por_id: string;
+  medico_id?: string;
+  // realizado_por_id eliminado - usar medico_id consistentemente
   fecha_control: string | Date;
   proxima_cita?: string | Date;
   recomendaciones?: string;
@@ -62,7 +63,7 @@ export interface CrearAlertaManualDTO extends DatosClinicosDTO {
   
   // Asignaciones
   madrina_id?: string;
-  medico_asignado_id?: string;
+  medico_tratante_id?: string;
   ips_derivada_id?: string;
   
   // Evaluación automática adicional
@@ -117,7 +118,7 @@ export interface AlertaAutomaticaDTO {
   
   // Asignaciones automáticas
   madrina_id?: string;
-  medico_asignado_id?: string;
+  medico_tratante_id?: string;
   ips_derivada_id?: string;
   
   // Geolocalización

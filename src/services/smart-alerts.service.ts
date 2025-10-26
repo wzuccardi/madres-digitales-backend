@@ -11,7 +11,7 @@ export class SmartAlertsService {
     try {
       console.log('🚨 SmartAlertsService: Evaluando alertas para gestante:', gestanteId);
 
-      const gestante = await prisma.gestante.findUnique({
+      const gestante = await prisma.gestantes.findUnique({
         where: { id: gestanteId },
         include: {
           controles: {
@@ -28,7 +28,7 @@ export class SmartAlertsService {
           },
           madrina: true,
           medico_tratante: true,
-          municipio: true,
+          municipios: true,
         },
       }) as any;
 
@@ -101,7 +101,7 @@ export class SmartAlertsService {
       for (const alertaConfig of alertasRiesgoAlto) {
         if (factoresRiesgo.includes(alertaConfig.factor)) {
           // Verificar si ya existe una alerta similar reciente
-          const alertaExistente = await prisma.alerta.findFirst({
+          const alertaExistente = await prisma.alertas.findFirst({
             where: {
               gestante_id: gestante.id,
               mensaje: {
@@ -122,7 +122,7 @@ export class SmartAlertsService {
               mensaje: alertaConfig.mensaje,
               sintomas: [alertaConfig.factor],
               madrinaId: gestante.madrina_id,
-              medicoId: gestante.medico_asignado_id,
+              medicoId: gestante.medico_tratante_id,
               coordenadas: gestante.coordenadas,
             });
             alertas++;
@@ -157,7 +157,7 @@ export class SmartAlertsService {
           mensaje: 'Gestante sin controles prenatales registrados',
           sintomas: ['sin_controles'],
           madrinaId: gestante.madrina_id,
-          medicoId: gestante.medico_asignado_id,
+          medicoId: gestante.medico_tratante_id,
           coordenadas: gestante.coordenadas,
         });
         alertas++;
@@ -175,7 +175,7 @@ export class SmartAlertsService {
             mensaje: `Gestante sin control prenatal hace ${diasSinControl} días`,
             sintomas: ['control_vencido'],
             madrinaId: gestante.madrina_id,
-            medicoId: gestante.medico_asignado_id,
+            medicoId: gestante.medico_tratante_id,
             coordenadas: gestante.coordenadas,
           });
           alertas++;
@@ -190,7 +190,7 @@ export class SmartAlertsService {
             mensaje: `Presión arterial elevada: ${ultimoControl.presion_sistolica}/${ultimoControl.presion_diastolica}`,
             sintomas: ['hipertension'],
             madrinaId: gestante.madrina_id,
-            medicoId: gestante.medico_asignado_id,
+            medicoId: gestante.medico_tratante_id,
             coordenadas: gestante.coordenadas,
           });
           alertas++;
@@ -204,7 +204,7 @@ export class SmartAlertsService {
             mensaje: `Fiebre detectada: ${ultimoControl.temperatura}°C`,
             sintomas: ['fiebre'],
             madrinaId: gestante.madrina_id,
-            medicoId: gestante.medico_asignado_id,
+            medicoId: gestante.medico_tratante_id,
             coordenadas: gestante.coordenadas,
           });
           alertas++;
@@ -239,7 +239,7 @@ export class SmartAlertsService {
       }
 
       // Si la gestante no tiene médico asignado
-      if (!gestante.medico_asignado_id) {
+      if (!gestante.medico_tratante_id) {
         await this.createAlert({
           gestanteId: gestante.id,
           tipo: 'sistema' as AlertaTipo,
@@ -281,7 +281,7 @@ export class SmartAlertsService {
             mensaje: `Fecha probable de parto en ${diasParaParto} días`,
             sintomas: ['parto_cercano'],
             madrinaId: gestante.madrina_id,
-            medicoId: gestante.medico_asignado_id,
+            medicoId: gestante.medico_tratante_id,
             coordenadas: gestante.coordenadas,
           });
           alertas++;
@@ -293,7 +293,7 @@ export class SmartAlertsService {
             mensaje: 'Fecha probable de parto vencida - verificar estado',
             sintomas: ['parto_vencido'],
             madrinaId: gestante.madrina_id,
-            medicoId: gestante.medico_asignado_id,
+            medicoId: gestante.medico_tratante_id,
             coordenadas: gestante.coordenadas,
           });
           alertas++;
@@ -321,7 +321,7 @@ export class SmartAlertsService {
     coordenadas?: any;
   }) {
     try {
-      await prisma.alerta.create({
+      await prisma.alertas.create({
         data: {
           gestante_id: alertData.gestanteId,
           tipo_alerta: alertData.tipo,
@@ -348,7 +348,7 @@ export class SmartAlertsService {
     try {
       console.log('🚀 SmartAlertsService: Iniciando evaluación masiva de alertas...');
 
-      const gestantesActivas = await prisma.gestante.findMany({
+      const gestantesActivas = await prisma.gestantes.findMany({
         where: { activa: true },
         select: { id: true },
       });
@@ -390,12 +390,12 @@ export class SmartAlertsService {
         };
       }
 
-      const alertas = await prisma.alerta.findMany({
+      const alertas = await prisma.alertas.findMany({
         where: whereClause,
         include: {
           gestante: {
             include: {
-              municipio: true,
+              municipios: true,
               madrina: true,
               medico_tratante: true,
             },

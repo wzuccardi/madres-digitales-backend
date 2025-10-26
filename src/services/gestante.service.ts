@@ -13,7 +13,7 @@ export class GestanteService {
 	// MÉTODO ORIGINAL - SOLO PARA ADMINISTRADORES
 	async getAllGestantes() {
 		console.log('🤰 GestanteService: Fetching all gestantes (ADMIN ONLY)...');
-		const gestantes = await prisma.gestante.findMany({
+		const gestantes = await prisma.gestantes.findMany({
 			orderBy: { fecha_creacion: 'desc' }
 		});
 		console.log(`🤰 GestanteService: Found ${gestantes.length} gestantes`);
@@ -44,7 +44,7 @@ export class GestanteService {
 	}
 
 	async getGestanteById(id: string) {
-		return prisma.gestante.findUnique({
+		return prisma.gestantes.findUnique({
 			where: { id },
 			include: {
 				municipio: true,
@@ -85,15 +85,15 @@ export class GestanteService {
 	}
 
 	async createGestante(data: any) {
-		return prisma.gestante.create({ data });
+		return prisma.gestantes.create({ data });
 	}
 
 	async updateGestante(id: string, data: any) {
-		return prisma.gestante.update({ where: { id }, data });
+		return prisma.gestantes.update({ where: { id }, data });
 	}
 
 	async deleteGestante(id: string) {
-		return prisma.gestante.delete({ where: { id } });
+		return prisma.gestantes.delete({ where: { id } });
 	}
 
 	// Método para crear gestante con validaciones completas
@@ -103,7 +103,7 @@ export class GestanteService {
 
 		try {
 			// Validar que el documento no exista
-			const existingGestante = await prisma.gestante.findFirst({
+			const existingGestante = await prisma.gestantes.findFirst({
 				where: { documento: data.documento }
 			});
 
@@ -166,7 +166,7 @@ export class GestanteService {
 
 		try {
 			// Verificar que la gestante existe
-			const existingGestante = await prisma.gestante.findUnique({
+			const existingGestante = await prisma.gestantes.findUnique({
 				where: { id }
 			});
 
@@ -176,7 +176,7 @@ export class GestanteService {
 
 			// Si se está cambiando el documento, verificar que no exista otro con el mismo
 			if (data.documento && data.documento !== existingGestante.documento) {
-				const duplicateGestante = await prisma.gestante.findFirst({
+				const duplicateGestante = await prisma.gestantes.findFirst({
 					where: {
 						documento: data.documento,
 						id: { not: id }
@@ -224,7 +224,7 @@ export class GestanteService {
 
 		try {
 			// Construir condiciones WHERE
-			const where: Prisma.GestanteWhereInput = {};
+			const where: any = {};
 
 			// Búsqueda por texto (nombre o documento)
 			if (filtros.busqueda) {
@@ -280,7 +280,7 @@ export class GestanteService {
 			}
 
 			// Contar total de registros
-			const total = await prisma.gestante.count({ where });
+			const total = await prisma.gestantes.count({ where });
 
 			// Calcular paginación
 			const page = filtros.page || 1;
@@ -289,7 +289,7 @@ export class GestanteService {
 			const totalPages = Math.ceil(total / limit);
 
 			// Construir ordenamiento
-			const orderBy: Prisma.GestanteOrderByWithRelationInput = {};
+			const orderBy: any = {};
 			const orderField = filtros.orderBy || 'fecha_creacion';
 			const orderDirection = filtros.orderDirection || 'desc';
 			orderBy[orderField] = orderDirection;
@@ -395,7 +395,7 @@ export class GestanteService {
 
 		try {
 			// Verificar que la gestante existe
-			const gestante = await prisma.gestante.findUnique({
+			const gestante = await prisma.gestantes.findUnique({
 				where: { id: gestanteId }
 			});
 
@@ -404,7 +404,7 @@ export class GestanteService {
 			}
 
 			// Verificar que la madrina existe
-			const madrina = await prisma.usuario.findUnique({
+			const madrina = await prisma.usuarios.findUnique({
 				where: { id: madrinaId }
 			});
 

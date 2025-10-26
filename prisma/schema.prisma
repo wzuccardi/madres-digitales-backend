@@ -95,11 +95,9 @@ model medicos {
   tipo_documento      String?   @default("cedula")
 
   // Relaciones
-  ips                 ips?                @relation(fields: [ips_id], references: [id])
-  municipios          municipios?         @relation(fields: [municipio_id], references: [id])
+  ips                 ips?        @relation(fields: [ips_id], references: [id])
+  municipios          municipios? @relation(fields: [municipio_id], references: [id])
   gestantes           gestantes[]
-  controles           controles[]
-  control_prenatal    control_prenatal[]
 
   @@map("medicos")
 }
@@ -132,8 +130,6 @@ model gestantes {
   medico_tratante           medicos?                @relation(fields: [medico_tratante_id], references: [id])
   ips_asignada              ips?                    @relation(fields: [ips_asignada_id], references: [id])
   alertas                   alertas[]
-  controles                 controles[]
-  control_prenatal          control_prenatal[]
   contactos_emergencia      contactos_emergencia[]
   seguimiento_emergencia    seguimiento_emergencia[]
 
@@ -169,70 +165,6 @@ model alertas {
   @@map("alertas")
 }
 
-model controles {
-  id                      String    @id
-  gestante_id             String
-  medico_id               String?
-  fecha_control           DateTime
-  semanas_gestacion       Int?
-  peso                    Float?
-  altura_uterina          Float?
-  presion_sistolica       Int?
-  presion_diastolica      Int?
-  frecuencia_cardiaca     Int?
-  frecuencia_respiratoria Int?
-  temperatura             Float?
-  movimientos_fetales     String?
-  edemas                  String?
-  proteinuria             String?
-  glucosuria              String?
-  hallazgos               Json?
-  recomendaciones         String?
-  proximo_control         DateTime?
-  realizado               Boolean   @default(false)
-  fecha_creacion          DateTime  @default(now())
-  fecha_actualizacion     DateTime  @updatedAt
-
-  // Relaciones
-  gestante                gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
-  medico                  medicos?  @relation(fields: [medico_id], references: [id], onDelete: SetNull)
-
-  @@map("controles")
-}
-
-model control_prenatal {
-  id                      String    @id
-  gestante_id             String
-  medico_id               String?
-  fecha_control           DateTime
-  semanas_gestacion       Int?
-  peso                    Float?
-  altura_uterina          Float?
-  presion_sistolica       Int?
-  presion_diastolica      Int?
-  frecuencia_cardiaca     Int?
-  frecuencia_respiratoria Int?
-  temperatura             Float?
-  movimientos_fetales     String?
-  edemas                  String?
-  proteinuria             String?
-  glucosuria              String?
-  hallazgos               Json?
-  recomendaciones         String?
-  proximo_control         DateTime?
-  realizado               Boolean   @default(false)
-  observaciones           String?
-  examenes_solicitados    Json?
-  resultados_examenes     Json?
-  fecha_creacion          DateTime  @default(now())
-  fecha_actualizacion     DateTime  @updatedAt
-
-  // Relaciones
-  gestante                gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
-  medico                  medicos?  @relation(fields: [medico_id], references: [id], onDelete: SetNull)
-
-  @@map("control_prenatal")
-}
 
 model contactos_emergencia {
   id                  String    @id
@@ -477,4 +409,34 @@ model logs {
   fecha_creacion DateTime @default(now())
 
   @@map("logs")
+}
+
+model control_prenatal {
+  id                    String    @id
+  gestante_id           String
+  medico_id             String?
+  fecha_control          DateTime  @db.Timestamp(3)
+  semanas_gestacion     Int?
+  peso                  Float?
+  altura_uterina        Float?
+  presion_sistolica     Int?
+  presion_diastolica    Int?
+  frecuencia_cardiaca    Int?
+  frecuencia_respiratoria Int?
+  temperatura           Float?
+  movimientos_fetales   String?
+  edemas                String?
+  proteinuria           String?
+  glucosuria            String?
+  hallazgos             Json?
+  recomendaciones        String?
+  proximo_control       DateTime? @db.Timestamp(3)
+  realizado             Boolean   @default(false)
+  observaciones          String?
+  examenes_solicitados  Json?
+  resultados_examenes    Json?
+  fecha_creacion        DateTime  @default(now()) @db.Timestamp(3)
+  fecha_actualizacion    DateTime  @updatedAt @db.Timestamp(3)
+
+  @@map("control_prenatal")
 }

@@ -49,7 +49,7 @@ export class AlertaService {
     try {
       console.log('🔍 AlertaService: Fetching all alertas');
       
-      const alertas = await prisma.alerta.findMany({
+      const alertas = await prisma.alertas.findMany({
         include: {
           gestante: {
             select: {
@@ -57,7 +57,7 @@ export class AlertaService {
               nombre: true,
               documento: true,
               telefono: true,
-              municipio: {
+              municipios: {
                 select: {
                   id: true,
                   nombre: true,
@@ -102,14 +102,23 @@ export class AlertaService {
       }
 
       // Obtener información de la gestante para asignar madrina automáticamente
-      const gestante = await prisma.gestante.findUnique({
+      console.log('🔍 DEBUG: Verificando campos de gestante en la base de datos...');
+      const gestante = await prisma.gestantes.findUnique({
         where: { id: data.gestante_id },
         select: {
           id: true,
           nombre: true,
           madrina_id: true,
+          medico_tratante_id: true, // Campo correcto según schema
           municipio_id: true
         }
+      });
+      
+      console.log('🔍 DEBUG: Campos de gestante encontrados:', {
+        madrina_id: gestante?.madrina_id,
+        medico_tratante_id: gestante?.medico_tratante_id,
+        // Verificamos si existe medico_asignado_id (no debería existir)
+        medico_asignado_id: (gestante as any)?.medico_asignado_id
       });
 
       if (!gestante) {
@@ -140,14 +149,14 @@ export class AlertaService {
         };
       }
 
-      const nuevaAlerta = await prisma.alerta.create({
+      const nuevaAlerta = await prisma.alertas.create({
         data: alertaData,
         include: {
           gestante: {
             select: {
               id: true,
               nombre: true,
-              municipio: {
+              municipios: {
                 select: { id: true, nombre: true }
               }
             }
@@ -183,7 +192,7 @@ export class AlertaService {
     try {
       console.log(`🔍 AlertaService: Obteniendo alerta ${alertaId} para usuario ${userId}`);
 
-      const alerta = await prisma.alerta.findUnique({
+      const alerta = await prisma.alertas.findUnique({
         where: { id: alertaId },
         include: {
           gestante: {
@@ -192,7 +201,7 @@ export class AlertaService {
               nombre: true,
               documento: true,
               telefono: true,
-              municipio: {
+              municipios: {
                 select: { id: true, nombre: true }
               }
             }
@@ -233,7 +242,7 @@ export class AlertaService {
       // Verificar que la alerta existe y el usuario tiene permisos
       const alerta = await this.getAlertaById(alertaId, userId);
 
-      const alertaResuelta = await prisma.alerta.update({
+      const alertaResuelta = await prisma.alertas.update({
         where: { id: alertaId },
         data: {
           resuelta: true,
@@ -277,7 +286,7 @@ export class AlertaService {
     try {
       console.log(`🔍 AlertaService: Fetching alertas for madrina ${madrinaId}`);
       
-      const alertas = await prisma.alerta.findMany({
+      const alertas = await prisma.alertas.findMany({
         where: {
           OR: [
             { madrina_id: madrinaId },
@@ -295,7 +304,7 @@ export class AlertaService {
               nombre: true,
               documento: true,
               telefono: true,
-              municipio: {
+              municipios: {
                 select: {
                   id: true,
                   nombre: true,
@@ -334,7 +343,7 @@ export class AlertaService {
       console.log('🚨 AlertaService: Creating complete alert with data:', data);
       
       // Validar que la gestante existe
-      const gestante = await prisma.gestante.findUnique({
+      const gestante = await prisma.gestantes.findUnique({
         where: { id: data.gestante_id }
       });
 
@@ -342,8 +351,15 @@ export class AlertaService {
         throw new Error(`No se encontró gestante con ID ${data.gestante_id}`);
       }
 
+      // DEBUG: Verificar campos recibidos
+      console.log('🔍 DEBUG: Campos recibidos en createAlertaCompleta:', {
+        madrina_id: data.madrina_id,
+        medico_asignado_id: data.medico_asignado_id,
+        medico_tratante_id: data.medico_tratante_id
+      });
+
       // Crear la alerta
-      const alerta = await prisma.alerta.create({
+      const alerta = await prisma.alertas.create({
         data: {
           gestante_id: data.gestante_id,
           tipo_alerta: data.tipo_alerta || data.tipo,
@@ -351,7 +367,7 @@ export class AlertaService {
           mensaje: data.mensaje || 'Alerta creada',
           sintomas: data.sintomas || [],
           madrina_id: data.madrina_id || null,
-          medico_asignado_id: data.medico_asignado_id || null,
+          medico_asignado_id: data.medico_tratante_id || null,
           ips_derivada_id: data.ips_derivada_id || null,
           generado_por_id: data.generado_por_id || null,
           coordenadas_alerta: data.coordenadas ? {
@@ -388,7 +404,7 @@ export class AlertaService {
       console.log(`🚨 AlertaService: Updating alert ${id} with data:`, data);
       
       // Verificar que la alerta existe
-      const alertaExistente = await prisma.alerta.findUnique({
+      const alertaExistente = await prisma.alertas.findUnique({
         where: { id }
       });
 
@@ -397,7 +413,7 @@ export class AlertaService {
       }
 
       // Actualizar la alerta
-      const alerta = await prisma.alerta.update({
+      const alerta = await prisma.alertas.update({
         where: { id },
         data: {
           tipo_alerta: data.tipo_alerta || data.tipo,
@@ -405,7 +421,7 @@ export class AlertaService {
           mensaje: data.mensaje,
           sintomas: data.sintomas,
           madrina_id: data.madrina_id,
-          medico_asignado_id: data.medico_asignado_id,
+          medico_asignado_id: data.medico_tratante_id || null,
           ips_derivada_id: data.ips_derivada_id,
           resuelta: data.resuelta,
           fecha_resolucion: data.resuelta ? new Date() : null,
@@ -441,7 +457,7 @@ export class AlertaService {
     try {
       console.log(`🗑️ AlertaService: Deleting alert ${id}`);
       
-      const alerta = await prisma.alerta.delete({
+      const alerta = await prisma.alertas.delete({
         where: { id }
       });
 
@@ -460,7 +476,7 @@ export class AlertaService {
     try {
       console.log(`🔍 AlertaService: Fetching alertas for gestante ${gestanteId}`);
       
-      const alertas = await prisma.alerta.findMany({
+      const alertas = await prisma.alertas.findMany({
         where: { gestante_id: gestanteId },
         include: {
           madrina: {
@@ -491,7 +507,7 @@ export class AlertaService {
     try {
       console.log('🔍 AlertaService: Fetching active alertas');
       
-      const alertas = await prisma.alerta.findMany({
+      const alertas = await prisma.alertas.findMany({
         where: { resuelta: false },
         include: {
           gestante: {
@@ -500,7 +516,7 @@ export class AlertaService {
               nombre: true,
               documento: true,
               telefono: true,
-              municipio: {
+              municipios: {
                 select: {
                   id: true,
                   nombre: true,
@@ -570,14 +586,15 @@ export class AlertaService {
     const startTime = Date.now();
 
     try {
-      // Obtener información completa de la gestante
-      const gestanteCompleta = await prisma.gestante.findUnique({
+      // DEBUG: Verificar campos de gestante en notificarEmergencia
+      console.log('🔍 DEBUG: Verificando gestante en notificarEmergencia');
+      const gestanteCompleta = await prisma.gestantes.findUnique({
         where: { id: gestanteId },
         include: {
-          municipio: true,
+          municipios: true, // Corregido: municipio -> municipios
           madrina: {
             include: {
-              municipio: true,
+              municipios: true, // Corregido: municipio -> municipios
             },
           },
           medico_tratante: {
@@ -587,6 +604,12 @@ export class AlertaService {
           },
           ips_asignada: true,
         },
+      });
+
+      console.log('🔍 DEBUG: Campos de gestante en notificarEmergencia:', {
+        madrina_id: gestanteCompleta?.madrina_id,
+        medico_tratante_id: gestanteCompleta?.medico_tratante_id,
+        medico_asignado_id: (gestanteCompleta as any)?.medico_asignado_id
       });
 
       if (!gestanteCompleta) {
@@ -609,7 +632,7 @@ export class AlertaService {
       mensajeDetallado += `⚠️ REQUIERE ATENCIÓN MÉDICA INMEDIATA`;
 
       // Crear alerta de emergencia SOS
-      const alertaSOS = await prisma.alerta.create({
+      const alertaSOS = await prisma.alertas.create({
         data: {
           gestante_id: gestanteId,
           madrina_id: gestanteCompleta.madrina_id || null,
