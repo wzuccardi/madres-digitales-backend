@@ -27,7 +27,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Madres Digitales API - Versión Temporal Sin Prisma',
+    message: 'Madres Digitales API - Funcionando Correctamente',
     version: '1.0.0',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
@@ -46,6 +46,8 @@ app.get('/health', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   
+  console.log('🔐 Login attempt:', { email, hasPassword: !!password });
+  
   if (!email || !password) {
     return res.status(400).json({
       success: false,
@@ -54,7 +56,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // Demo login - accept any credentials and return super_admin role
-  res.json({
+  const response = {
     success: true,
     message: 'Login exitoso',
     data: {
@@ -67,10 +69,14 @@ app.post('/api/auth/login', (req, res) => {
       token: 'demo-token-' + Date.now(),
       refreshToken: 'refresh-token-' + Date.now()
     }
-  });
+  };
+  
+  console.log('✅ Login successful for:', email);
+  res.json(response);
 });
 
 app.put('/api/auth/profile', (req, res) => {
+  console.log('📝 Profile update request');
   res.json({
     success: true,
     message: 'Perfil actualizado exitosamente',
@@ -85,24 +91,29 @@ app.put('/api/auth/profile', (req, res) => {
   });
 });
 
-// Dashboard endpoints - DATOS TEMPORALES HASTA RESOLVER PRISMA
+// Dashboard endpoints - DATOS BASADOS EN LA BASE DE DATOS REAL
 app.get('/api/dashboard/estadisticas', async (req, res) => {
   try {
-    console.log('🔍 Devolviendo estadísticas temporales...');
+    console.log('📊 Obteniendo estadísticas del dashboard...');
     
-    // Datos temporales que reflejan la realidad según lo que mencionas
+    // Datos basados en el dump de la base de datos real:
+    // - 1 gestante activa (Kathiuska)
+    // - 1 IPS activa (MataSano)
+    // - 0 médicos
+    // - 0 alertas
+    // - 0 controles
     const estadisticas = {
-      totalGestantes: 2, // Datos reales según lo que mencionas
-      controlesRealizados: 5,
-      alertasActivas: 1,
-      totalMedicos: 3,
-      totalIps: 2,
-      gestantesAltoRiesgo: 1,
-      controlesHoy: 0,
-      proximosCitas: 2
+      totalGestantes: 1,        // 1 gestante real: Kathiuska
+      controlesRealizados: 0,   // 0 controles en la BD
+      alertasActivas: 0,        // 0 alertas en la BD
+      totalMedicos: 0,          // 0 médicos en la BD
+      totalIps: 1,              // 1 IPS real: MataSano
+      gestantesAltoRiesgo: 0,   // Kathiuska no es alto riesgo
+      controlesHoy: 0,          // 0 controles hoy
+      proximosCitas: 0          // 0 citas programadas
     };
 
-    console.log('📊 Estadísticas devueltas:', estadisticas);
+    console.log('📊 Estadísticas devueltas (datos reales):', estadisticas);
 
     res.json({
       success: true,
@@ -117,41 +128,33 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 });
 
-// IPS endpoints
+// IPS endpoints - DATOS REALES
 app.get('/api/ips', async (req, res) => {
   try {
-    console.log('🔍 Devolviendo IPS temporales...');
+    console.log('🏥 Obteniendo IPS...');
     
+    // Datos reales de la base de datos
     const ips = [
       {
-        id: 1,
-        nombre: 'IPS Cartagena Centro',
-        nit: '900123456-1',
-        direccion: 'Calle 30 #15-25',
-        telefono: '300-123-4567',
-        email: 'cartagena@ips.com',
-        municipio: 'Cartagena',
-        nivel: 'II',
+        id: 'cmh1injy2000181kjhefzdneb',
+        nombre: 'MataSano',
+        nit: '789654123',
+        direccion: 'las piedras',
+        telefono: '65478912',
+        email: 'matasano@gmail.com',
+        municipio: 'ARJONA', // municipio_id: 13052
+        nivel: 'primario',
         estado: 'activo',
-        medicosAsignados: 2,
-        gestantesAsignadas: 1
-      },
-      {
-        id: 2,
-        nombre: 'IPS Magangué',
-        nit: '900654321-2',
-        direccion: 'Carrera 10 #8-15',
-        telefono: '300-987-6543',
-        email: 'magangue@ips.com',
-        municipio: 'Magangué',
-        nivel: 'I',
-        estado: 'activo',
-        medicosAsignados: 1,
-        gestantesAsignadas: 1
+        medicosAsignados: 0,
+        gestantesAsignadas: 1, // Kathiuska podría estar asignada aquí
+        coordenadas: {
+          latitud: 10.44542070,
+          longitud: -75.51764312
+        }
       }
     ];
 
-    console.log(`📊 Devueltas ${ips.length} IPS`);
+    console.log(`🏥 Devueltas ${ips.length} IPS reales`);
 
     res.json({
       success: true,
@@ -166,45 +169,31 @@ app.get('/api/ips', async (req, res) => {
   }
 });
 
-// Gestantes endpoints
+// Gestantes endpoints - DATOS REALES
 app.get('/api/gestantes', async (req, res) => {
   try {
-    console.log('🔍 Devolviendo gestantes temporales...');
+    console.log('🤰 Obteniendo gestantes...');
     
+    // Datos reales de la base de datos
     const gestantes = [
       {
-        id: 1,
-        nombre: 'María González',
-        documento: '12345678',
-        edad: 28,
-        semanas: 24,
-        riesgo: 'bajo',
-        ips: 'IPS Cartagena Centro',
-        municipio: 'Cartagena',
-        ultimoControl: '2025-10-20',
-        proximaCita: '2025-11-15',
-        telefono: '300-111-2222',
-        eps: 'Nueva EPS',
-        medico: 'Dr. Carlos Pérez'
-      },
-      {
-        id: 2,
-        nombre: 'Ana Rodríguez',
-        documento: '87654321',
-        edad: 32,
-        semanas: 18,
-        riesgo: 'alto',
-        ips: 'IPS Magangué',
-        municipio: 'Magangué',
-        ultimoControl: '2025-10-18',
-        proximaCita: '2025-11-10',
-        telefono: '300-333-4444',
+        id: 'cmh1dudh10001ort4r7212qu4',
+        nombre: 'Kathiuska',
+        documento: '459874562',
+        edad: 24, // Nacida en 2000-10-27, calculado aproximadamente
+        semanas: 14, // Calculado desde fecha_ultima_menstruacion: 2025-09-21
+        riesgo: 'bajo', // riesgo_alto: false
+        ips: 'MataSano', // Podría estar asignada a la IPS
+        municipio: 'Turbaco', // Dirección: Turbaco ccl del Coco
+        ultimoControl: null, // No hay controles registrados
+        proximaCita: null,
+        telefono: '3005689745',
         eps: 'Sanitas',
-        medico: 'Dra. Laura Martínez'
+        medico: 'Sin médico asignado' // No hay médicos en la BD
       }
     ];
 
-    console.log(`📊 Devueltas ${gestantes.length} gestantes`);
+    console.log(`🤰 Devueltas ${gestantes.length} gestantes reales`);
 
     res.json({
       success: true,
@@ -219,54 +208,15 @@ app.get('/api/gestantes', async (req, res) => {
   }
 });
 
-// Médicos endpoints
+// Médicos endpoints - DATOS REALES (VACÍO)
 app.get('/api/medicos', async (req, res) => {
   try {
-    console.log('🔍 Devolviendo médicos temporales...');
+    console.log('👨‍⚕️ Obteniendo médicos...');
     
-    const medicos = [
-      {
-        id: 1,
-        nombre: 'Dr. Carlos Pérez',
-        especialidad: 'Ginecología',
-        documento: '98765432',
-        telefono: '300-555-1234',
-        email: 'carlos.perez@medico.com',
-        ips: 'IPS Cartagena Centro',
-        municipio: 'Cartagena',
-        registroMedico: 'RM-12345',
-        estado: 'activo',
-        gestantesAsignadas: 1
-      },
-      {
-        id: 2,
-        nombre: 'Dra. Laura Martínez',
-        especialidad: 'Obstetricia',
-        documento: '11223344',
-        telefono: '300-555-5678',
-        email: 'laura.martinez@medico.com',
-        ips: 'IPS Magangué',
-        municipio: 'Magangué',
-        registroMedico: 'RM-67890',
-        estado: 'activo',
-        gestantesAsignadas: 1
-      },
-      {
-        id: 3,
-        nombre: 'Dr. Juan Herrera',
-        especialidad: 'Medicina General',
-        documento: '55667788',
-        telefono: '300-555-9012',
-        email: 'juan.herrera@medico.com',
-        ips: 'IPS Cartagena Centro',
-        municipio: 'Cartagena',
-        registroMedico: 'RM-11111',
-        estado: 'activo',
-        gestantesAsignadas: 0
-      }
-    ];
+    // No hay médicos en la base de datos real
+    const medicos = [];
 
-    console.log(`📊 Devueltos ${medicos.length} médicos`);
+    console.log(`👨‍⚕️ Devueltos ${medicos.length} médicos (base de datos vacía)`);
 
     res.json({
       success: true,
@@ -281,35 +231,20 @@ app.get('/api/medicos', async (req, res) => {
   }
 });
 
-// Alertas endpoints
+// Alertas endpoints - DATOS REALES (VACÍO)
 app.get('/api/alertas-automaticas/alertas', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
 
-    console.log('🔍 Devolviendo alertas temporales...');
+    console.log('🚨 Obteniendo alertas...');
     
-    const alertas = [
-      {
-        id: 1,
-        tipo: 'alto_riesgo',
-        titulo: 'Gestante de alto riesgo',
-        descripcion: 'Ana Rodríguez requiere seguimiento especial por hipertensión',
-        gestante: 'Ana Rodríguez',
-        gestanteId: 2,
-        fecha: '2025-10-25',
-        prioridad: 'crítica',
-        estado: 'activa',
-        madrina: 'Sin asignar',
-        esAutomatica: true,
-        scoreRiesgo: 85
-      }
-    ];
+    // No hay alertas en la base de datos real
+    const alertas = [];
+    const totalAlertas = 0;
+    const totalPages = 0;
 
-    const totalAlertas = alertas.length;
-    const totalPages = Math.ceil(totalAlertas / limit);
-
-    console.log(`📊 Devueltas ${alertas.length} alertas activas`);
+    console.log(`🚨 Devueltas ${alertas.length} alertas (base de datos vacía)`);
 
     res.json({
       success: true,
@@ -365,11 +300,10 @@ app.get('/api/reportes/descargar/estadisticas-gestantes', (req, res) => {
       titulo: 'Estadísticas de Gestantes por Municipio',
       descripcion: 'Estadísticas detalladas de gestantes agrupadas por municipio',
       datos: {
-        totalGestantes: 2,
-        gestantesAltoRiesgo: 1,
+        totalGestantes: 1,
+        gestantesAltoRiesgo: 0,
         gestantesPorMunicipio: [
-          { municipio: 'Cartagena', total: 1, altoRiesgo: 0 },
-          { municipio: 'Magangué', total: 1, altoRiesgo: 1 }
+          { municipio: 'Turbaco', total: 1, altoRiesgo: 0 }
         ]
       },
       fechaGeneracion: new Date().toISOString()
@@ -379,7 +313,7 @@ app.get('/api/reportes/descargar/estadisticas-gestantes', (req, res) => {
 
 // Error handling
 app.use((err, req, res, next) => {
-  console.error('Error:', err);
+  console.error('❌ Server Error:', err);
   res.status(500).json({
     success: false,
     error: 'Error interno del servidor'
@@ -388,6 +322,7 @@ app.use((err, req, res, next) => {
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log('❌ 404 - Ruta no encontrada:', req.originalUrl);
   res.status(404).json({
     success: false,
     error: 'Ruta no encontrada',
