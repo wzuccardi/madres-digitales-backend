@@ -7,8 +7,8 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:3008',
-    'https://madres-digitales.vercel.app',
-    'https://madres-digitales-frontend.vercel.app'
+    'https://madres-digitales-frontend.vercel.app',
+    'https://madres-digitales.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
