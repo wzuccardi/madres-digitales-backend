@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { AlertaTipo, PrioridadNivel } from '../types/prisma-enums';
+import { log } from '../config/logger';
 
 const prisma = new PrismaClient();
 
@@ -9,7 +10,7 @@ export class SmartAlertsService {
    */
   async evaluateGestanteAlerts(gestanteId: string): Promise<number> {
     try {
-      console.log('🚨 SmartAlertsService: Evaluando alertas para gestante:', gestanteId);
+      log.info('SmartAlertsService: Evaluating alerts for gestante', { gestanteId });
 
       const gestante = await prisma.gestantes.findUnique({
         where: { id: gestanteId },
@@ -33,7 +34,7 @@ export class SmartAlertsService {
       }) as any;
 
       if (!gestante) {
-        console.log('❌ SmartAlertsService: Gestante no encontrada');
+        log.warn('SmartAlertsService: Gestante not found');
         return 0;
       }
 
@@ -57,10 +58,10 @@ export class SmartAlertsService {
       const alertasFechas = await this.evaluateDateAlerts(gestante);
       alertasGeneradas += alertasFechas;
 
-      console.log('✅ SmartAlertsService: Alertas generadas para gestante:', alertasGeneradas);
+      log.info('SmartAlertsService: Alerts generated for gestante', { count: alertasGeneradas });
       return alertasGeneradas;
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error evaluando alertas:', error);
+      log.error('SmartAlertsService: Error evaluating alerts', { error: error.message });
       return 0;
     }
   }
@@ -132,7 +133,7 @@ export class SmartAlertsService {
 
       return alertas;
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error evaluando factores de riesgo:', error);
+      log.error('SmartAlertsService: Error evaluating risk factors', { error: error.message });
       return 0;
     }
   }
@@ -213,7 +214,7 @@ export class SmartAlertsService {
 
       return alertas;
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error evaluando controles:', error);
+      log.error('SmartAlertsService: Error evaluating controls', { error: error.message });
       return 0;
     }
   }
@@ -253,7 +254,7 @@ export class SmartAlertsService {
 
       return alertas;
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error evaluando proximidad:', error);
+      log.error('SmartAlertsService: Error evaluating proximity', { error: error.message });
       return 0;
     }
   }
@@ -302,7 +303,7 @@ export class SmartAlertsService {
 
       return alertas;
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error evaluando fechas:', error);
+      log.error('SmartAlertsService: Error evaluating dates', { error: error.message });
       return 0;
     }
   }
@@ -332,12 +333,12 @@ export class SmartAlertsService {
           medico_asignado_id: alertData.medicoId,
           coordenadas_alerta: alertData.coordenadas,
           estado: 'pendiente',
-        },
+        } as any,
       });
 
-      console.log('🚨 SmartAlertsService: Alerta creada:', alertData.mensaje);
+      log.info('SmartAlertsService: Alert created', { message: alertData.mensaje });
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error creando alerta:', error);
+      log.error('SmartAlertsService: Error creating alert', { error: error.message });
     }
   }
 
@@ -346,14 +347,14 @@ export class SmartAlertsService {
    */
   async runMassiveAlertEvaluation(): Promise<{ gestantesEvaluadas: number; alertasGeneradas: number }> {
     try {
-      console.log('🚀 SmartAlertsService: Iniciando evaluación masiva de alertas...');
+      log.info('SmartAlertsService: Starting massive alert evaluation');
 
       const gestantesActivas = await prisma.gestantes.findMany({
         where: { activa: true },
         select: { id: true },
       });
 
-      console.log('📊 SmartAlertsService: Gestantes activas a evaluar:', gestantesActivas.length);
+      log.info('SmartAlertsService: Active gestantes to evaluate', { count: gestantesActivas.length });
 
       let totalAlertas = 0;
       for (const gestante of gestantesActivas) {
@@ -361,16 +362,16 @@ export class SmartAlertsService {
         totalAlertas += alertas;
       }
 
-      console.log('✅ SmartAlertsService: Evaluación masiva completada');
-      console.log('👥 Gestantes evaluadas:', gestantesActivas.length);
-      console.log('🚨 Alertas generadas:', totalAlertas);
+      log.info('SmartAlertsService: Massive evaluation completed');
+      log.info('SmartAlertsService: Gestantes evaluated', { count: gestantesActivas.length });
+      log.info('SmartAlertsService: Alerts generated', { count: totalAlertas });
 
       return {
         gestantesEvaluadas: gestantesActivas.length,
         alertasGeneradas: totalAlertas,
       };
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error en evaluación masiva:', error);
+      log.error('SmartAlertsService: Error in massive evaluation', { error: error.message });
       return { gestantesEvaluadas: 0, alertasGeneradas: 0 };
     }
   }
@@ -410,11 +411,11 @@ export class SmartAlertsService {
 
       return alertas.map(alerta => ({
         ...alerta,
-        prioridadNumerica: this.getPriorityScore(alerta.nivel_prioridad),
-        distanciaEstimada: this.calculateEstimatedDistance(alerta),
+        prioridad_score: this.getPriorityScore(alerta.nivel_prioridad),
+        distancia_estimada: this.calculateEstimatedDistance(alerta),
       }));
     } catch (error) {
-      console.error('❌ SmartAlertsService: Error obteniendo alertas priorizadas:', error);
+      log.error('SmartAlertsService: Error getting prioritized alerts', { error: error.message });
       return [];
     }
   }

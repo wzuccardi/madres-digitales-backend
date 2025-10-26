@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import * as multer from 'multer';
 import { ContenidoService } from '../services/contenido.service';
 import {
   crearContenidoSchema,
@@ -9,7 +10,7 @@ import {
   registrarDescargaSchema,
   calificarContenidoSchema,
 } from '../core/application/dtos/contenido.dto';
-import { logger } from '../config/logger';
+import { log } from '../config/logger';
 
 const contenidoService = new ContenidoService();
 
@@ -38,7 +39,7 @@ export const crearContenido = async (
     }
 
     // Si hay archivo subido, usar su información
-    const file = req.file as Express.Multer.File | undefined;
+    const file = req.file as any;
     let dto: any = { ...req.body };
 
     if (file) {
@@ -48,7 +49,7 @@ export const crearContenido = async (
       dto.archivoTipo = file.mimetype;
       dto.archivoTamano = file.size;
 
-      logger.info('Archivo subido', {
+      log.info('Archivo subido', {
         filename: file.filename,
         originalname: file.originalname,
         size: file.size,
@@ -59,7 +60,7 @@ export const crearContenido = async (
     const validatedDto = crearContenidoSchema.parse(dto);
     const contenido = await contenidoService.crearContenido(validatedDto, userId);
 
-    logger.info('Contenido creado', { userId, contenidoId: contenido.id });
+    log.info('Contenido creado', { userId, contenidoId: contenido.id });
 
     res.status(201).json({
       success: true,
@@ -121,9 +122,9 @@ export const buscarContenido = async (
       orderDir: req.query.orderDir,
     });
 
-    console.log('🔍 Buscar contenido DTO:', JSON.stringify(dto, null, 2));
+    log.debug('Searching content DTO', { dto });
     const result = await contenidoService.buscarContenido(dto, userId);
-    console.log('✅ Resultado:', result.total, 'contenidos encontrados');
+    log.info('Search result', { total: result.total, type: 'contenidos encontrados' });
 
     const limit = dto.limit || 20;
     const offset = dto.offset || 0;
@@ -153,7 +154,7 @@ export const actualizarContenido = async (
     const contenidoId = req.params.id;
 
     // Si hay archivo subido, usar su información
-    const file = req.file as Express.Multer.File | undefined;
+    const file = req.file as any;
     let dto: any = { ...req.body };
 
     if (file) {
@@ -162,7 +163,7 @@ export const actualizarContenido = async (
       if (contenidoActual && contenidoActual.archivo_url?.startsWith('/uploads/')) {
         const { eliminarArchivo } = await import('../utils/file.utils');
         await eliminarArchivo(contenidoActual.archivo_url).catch((err) => {
-          logger.warn('Error eliminando archivo anterior', { error: err });
+          log.warn('Error eliminando archivo anterior', { error: err });
         });
       }
 
@@ -171,7 +172,7 @@ export const actualizarContenido = async (
       dto.archivoTipo = file.mimetype;
       dto.archivoTamano = file.size;
 
-      logger.info('Archivo actualizado', {
+      log.info('Archivo actualizado', {
         filename: file.filename,
         originalname: file.originalname,
         size: file.size,
@@ -181,7 +182,7 @@ export const actualizarContenido = async (
     const validatedDto = actualizarContenidoSchema.parse(dto);
     const contenido = await contenidoService.actualizarContenido(contenidoId, validatedDto);
 
-    logger.info('Contenido actualizado', { contenidoId });
+    log.info('Contenido actualizado', { contenidoId });
 
     res.status(200).json({
       success: true,
@@ -215,11 +216,11 @@ export const eliminarContenido = async (
     if (contenido && contenido.archivo_url?.startsWith('/uploads/')) {
       const { eliminarArchivo } = await import('../utils/file.utils');
       await eliminarArchivo(contenido.archivo_url).catch((err) => {
-        logger.warn('Error eliminando archivo físico', { error: err });
+        log.warn('Error eliminando archivo físico', { error: err });
       });
     }
 
-    logger.info('Contenido eliminado', { contenidoId });
+    log.info('Contenido eliminado', { contenidoId });
 
     res.status(200).json({
       success: true,

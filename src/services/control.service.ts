@@ -6,6 +6,7 @@ import { CrearControlConEvaluacionDTO, ControlConEvaluacionDTO, ResultadoEvaluac
 import { AlertaService } from './alerta.service';
 import { AutoAlertService } from './auto-alert.service';
 import { AlertRulesEngine } from './alert-rules-engine.service';
+import { log } from '../config/logger';
 
 export class ControlService {
 	private alertaService: AlertaService;
@@ -19,15 +20,15 @@ export class ControlService {
 	}
 	// MÉTODO ORIGINAL - SOLO PARA ADMINISTRADORES
 	async getAllControles() {
-		console.log('🏥 ControlService: Fetching all controles (ADMIN ONLY)...');
+		log.info('ControlService: Fetching all controles (ADMIN ONLY)');
 		const controles = await prisma.control_prenatal.findMany();
-		console.log(`🏥 ControlService: Found ${controles.length} controles`);
+		log.info(`ControlService: Found ${controles.length} controles`);
 		return controles;
 	}
 
 	// NUEVO MÉTODO - FILTRADO POR MADRINA (SEGURIDAD)
 	async getControlesByMadrina(madrinaId: string) {
-		console.log(`🏥 ControlService: Fetching controles for madrina ${madrinaId}...`);
+		log.info(`ControlService: Fetching controles for madrina ${madrinaId}`);
 
 		// Primero obtenemos los IDs de las gestantes asignadas a esta madrina
 		const gestantesAsignadas = await prisma.gestantes.findMany({
@@ -36,10 +37,10 @@ export class ControlService {
 		});
 
 		const gestanteIds = gestantesAsignadas.map(g => g.id);
-		console.log(`🏥 ControlService: Found ${gestanteIds.length} gestantes for madrina ${madrinaId}`);
+		log.info(`ControlService: Found ${gestanteIds.length} gestantes for madrina ${madrinaId}`);
 
 		if (gestanteIds.length === 0) {
-			console.log(`🏥 ControlService: No gestantes found for madrina ${madrinaId}, returning empty array`);
+			log.info(`ControlService: No gestantes found for madrina ${madrinaId}, returning empty array`);
 			return [];
 		}
 
@@ -50,10 +51,24 @@ export class ControlService {
 					in: gestanteIds // FILTRO CRÍTICO DE SEGURIDAD
 				}
 			},
+			include: {
+				gestante: {
+					select: {
+						nombre: true,
+						documento: true
+					}
+				},
+				medico: {
+					select: {
+						nombre: true,
+						especialidad: true
+					}
+				}
+			},
 			orderBy: { fecha_control: 'desc' }
 		});
 
-		console.log(`🏥 ControlService: Found ${controles.length} controles for madrina ${madrinaId}`);
+		log.info(`ControlService: Found ${controles.length} controles for madrina ${madrinaId}`);
 		return controles;
 	}
 
@@ -75,8 +90,8 @@ export class ControlService {
 
 	// Método para crear control con validaciones
 	async createControlCompleto(data: any) {
-		console.log('🏥 ControlService: Creating new control...');
-		console.log('   Data received:', data);
+		log.info('ControlService: Creating new control');
+		log.debug('Data received', { data });
 
 		try {
 			// Validar que la gestante existe
@@ -101,18 +116,18 @@ export class ControlService {
 				} as any // Temporal hasta corregir todos los errores de TypeScript
 			});
 
-			console.log(`✅ ControlService: Control created with ID: ${newControl.id}`);
+			log.info(`ControlService: Control created with ID: ${newControl.id}`);
 			return newControl;
 		} catch (error) {
-			console.error('❌ ControlService: Error creating control:', error);
+			log.error('ControlService: Error creating control', { error: error.message });
 			throw error;
 		}
 	}
 
 	// Método para actualizar control con validaciones
 	async updateControlCompleto(id: string, data: any) {
-		console.log(`🏥 ControlService: Updating control ${id}...`);
-		console.log('   Data received:', data);
+		log.info(`ControlService: Updating control ${id}`);
+		log.debug('Data received', { data });
 
 		try {
 			// Verificar que el control existe
@@ -149,22 +164,22 @@ export class ControlService {
 				}
 			});
 
-			console.log(`✅ ControlService: Control ${id} updated successfully`);
+			log.info(`ControlService: Control ${id} updated successfully`);
 			return updatedControl;
 		} catch (error) {
-			console.error(`❌ ControlService: Error updating control ${id}:`, error);
+			log.error(`ControlService: Error updating control ${id}`, { error: error.message });
 			throw error;
 		}
 	}
 
 	// Método para obtener controles por gestante
 	async getControlesByGestante(gestanteId: string) {
-		console.log(`🏥 ControlService: Fetching controls for gestante ${gestanteId}...`);
+		log.info(`ControlService: Fetching controls for gestante ${gestanteId}`);
 		const controles = await prisma.control_prenatal.findMany({
 			where: { gestante_id: gestanteId },
 			orderBy: { fecha_control: 'desc' }
 		});
-		console.log(`🏥 ControlService: Found ${controles.length} controls for gestante`);
+		log.info(`ControlService: Found ${controles.length} controls for gestante`);
 		return controles;
 	}
 
@@ -176,17 +191,15 @@ export class ControlService {
 	 * @returns Control creado con resultado de evaluación y alertas generadas
 	 */
 	async createControlConEvaluacion(data: CrearControlConEvaluacionDTO): Promise<ControlConEvaluacionDTO> {
-		console.log('🏥 ControlService: Creating control with automatic alert evaluation...');
-		console.log('   Data received:', data);
+		log.info('ControlService: Creating control with automatic alert evaluation');
+		log.debug('Data received', { data });
 
-		// 🔍 DEBUG LOGS PARA DIAGNÓSTICO DE ERROR 400
-		console.log('🔍 DEBUG: Analizando inconsistencias de mapeo...');
-		console.log('🔍 DEBUG: medico_id:', {
+		log.debug('Analyzing mapping inconsistencies', {
 			medico_id: data.medico_id,
 			medico_id_tipo: typeof data.medico_id
 		});
 		
-		console.log('🔍 DEBUG: Campos booleanos:', {
+		log.debug('Boolean fields', {
 			movimientos_fetales: data.movimientos_fetales,
 			movimientos_fetales_tipo: typeof data.movimientos_fetales,
 			edemas: data.edemas,
@@ -215,7 +228,7 @@ export class ControlService {
 				});
 			}
 
-			// 🔍 DEBUG: Preparar datos para creación con logging detallado
+			// Preparar datos para creación con logging detallado
 			const controlData = {
 				gestante_id: data.gestante_id,
 				medico_id: data.medico_id || 'c66fdb18-76f4-4767-95ad-9b4b81fa6add', // Usuario por defecto (admin)
@@ -233,21 +246,21 @@ export class ControlService {
 				recomendaciones: data.recomendaciones || null,
 			};
 
-			console.log('🔍 DEBUG: Datos para crear control:', controlData);
+			log.debug('Data for creating control', { controlData });
 
 			// Crear el control
 			const nuevoControl = await prisma.control_prenatal.create({
 				data: controlData as any // Temporal hasta corregir todos los errores de TypeScript
 			});
 
-			console.log(`✅ ControlService: Control created with ID: ${nuevoControl.id}`);
+			log.info(`ControlService: Control created with ID: ${nuevoControl.id}`);
 
 			// Realizar evaluación automática si está habilitada
 			let evaluacion: ResultadoEvaluacionDTO;
 			let alertasGeneradas: any[] = [];
 
 			if (data.evaluar_automaticamente !== false) { // Por defecto true
-				console.log('🔍 ControlService: Performing automatic alert evaluation...');
+				log.info('ControlService: Performing automatic alert evaluation');
 
 				// Preparar datos para evaluación usando el nuevo AutoAlertService
 				const controlData = {
@@ -295,10 +308,10 @@ export class ControlService {
 						tiempo_evaluacion_ms: Date.now() - startTime
 					};
 
-					console.log(`✅ ControlService: Automatic evaluation completed. Generated ${alertasGeneradas.length} alerts`);
+					log.info(`ControlService: Automatic evaluation completed. Generated ${alertasGeneradas.length} alerts`);
 
 				} catch (alertError) {
-					console.error('❌ ControlService: Error in automatic alert evaluation:', alertError);
+					log.error('ControlService: Error in automatic alert evaluation', { error: alertError.message });
 					
 					// Fallback a evaluación básica
 					const puntuacionRiesgo = calcularPuntuacionRiesgo(controlData, data.sintomas, historialControles);
@@ -348,7 +361,7 @@ export class ControlService {
 			};
 
 		} catch (error) {
-			console.error('❌ ControlService: Error creating control with evaluation:', error);
+			log.error('ControlService: Error creating control with evaluation', { error: error.message });
 			throw error;
 		}
 	}
@@ -409,20 +422,20 @@ export class ControlService {
 
 	// NUEVO: Obtener historial de controles de una gestante
 	async getHistorialControles(gestanteId: string) {
-		console.log(`📊 ControlService: Fetching historial for gestante ${gestanteId}...`);
+		log.info(`ControlService: Fetching historial for gestante ${gestanteId}`);
 
 		const controles = await prisma.control_prenatal.findMany({
 			where: { gestante_id: gestanteId },
 			orderBy: { fecha_control: 'asc' }
 		}) as any;
 
-		console.log(`📊 ControlService: Found ${controles.length} controles in history`);
+		log.info(`ControlService: Found ${controles.length} controles in history`);
 		return controles;
 	}
 
 	// NUEVO: Obtener datos de evolución para gráficas
 	async getEvolucionGestante(gestanteId: string) {
-		console.log(`📈 ControlService: Calculating evolution for gestante ${gestanteId}...`);
+		log.info(`ControlService: Calculating evolution for gestante ${gestanteId}`);
 
 		const controles = await prisma.control_prenatal.findMany({
 			where: { gestante_id: gestanteId },
@@ -462,7 +475,7 @@ export class ControlService {
 			}
 		};
 
-		console.log(`📈 ControlService: Evolution calculated with ${evolucion.total_controles} controls`);
+		log.info(`ControlService: Evolution calculated with ${evolucion.total_controles} controls`);
 		return evolucion;
 	}
 
@@ -488,7 +501,7 @@ export class ControlService {
 
 	// NUEVO: Obtener control con datos de gestante
 	async getControlConGestante(controlId: string) {
-		console.log(`🔍 ControlService: Fetching control ${controlId} with gestante data...`);
+		log.info(`ControlService: Fetching control ${controlId} with gestante data`);
 
 		const control = await prisma.control_prenatal.findUnique({
 			where: { id: controlId }
@@ -498,13 +511,13 @@ export class ControlService {
 			throw new Error(`Control ${controlId} not found`);
 		}
 
-		console.log(`✅ ControlService: Control found for gestante ${(control as any).gestante?.nombre || 'desconocida'}`);
+		log.info(`ControlService: Control found for gestante ${(control as any).gestante?.nombre || 'desconocida'}`);
 		return control;
 	}
 
 	// NUEVO: Calcular próximo control recomendado
 	async calcularProximoControl(gestanteId: string) {
-		console.log(`📅 ControlService: Calculating next control for gestante ${gestanteId}...`);
+		log.info(`ControlService: Calculating next control for gestante ${gestanteId}`);
 
 		const ultimoControl = await prisma.control_prenatal.findFirst({
 			where: { gestante_id: gestanteId },
@@ -540,7 +553,7 @@ export class ControlService {
 			urgencia = 'baja';
 		}
 
-		console.log(`📅 ControlService: Next control recommendation: ${recomendacion}`);
+		log.info(`ControlService: Next control recommendation: ${recomendacion}`);
 		return {
 			recomendacion,
 			dias_desde_ultimo: diasDesdeUltimo,
@@ -551,7 +564,7 @@ export class ControlService {
 
 	// NUEVO: Obtener controles vencidos o próximos a vencer
 	async getControlesVencidos() {
-		console.log('⏰ ControlService: Fetching overdue controls');
+		log.info('ControlService: Fetching overdue controls');
 		
 		// Considerar un control como vencido si tiene más de 30 días desde la fecha esperada
 		const fechaLimite = new Date();
@@ -570,17 +583,17 @@ export class ControlService {
 				}
 			});
 			
-			console.log(`⏰ ControlService: Found ${controles.length} overdue controls`);
+			log.info(`ControlService: Found ${controles.length} overdue controls`);
 			return controles;
 		} catch (error) {
-			console.error('❌ ControlService: Error fetching overdue controls:', error);
+			log.error('ControlService: Error fetching overdue controls', { error: error.message });
 			throw error;
 		}
 	}
 
 	// NUEVO: Obtener controles vencidos por madrina
 	async getControlesVencidosByMadrina(madrinaId: string) {
-		console.log(`⏰ ControlService: Fetching overdue controls for madrina ${madrinaId}`);
+		log.info(`ControlService: Fetching overdue controls for madrina ${madrinaId}`);
 		
 		// Considerar un control como vencido si tiene más de 30 días desde la fecha esperada
 		const fechaLimite = new Date();
@@ -610,17 +623,17 @@ export class ControlService {
 				}
 			});
 			
-			console.log(`⏰ ControlService: Found ${controles.length} overdue controls for madrina ${madrinaId}`);
+			log.info(`ControlService: Found ${controles.length} overdue controls for madrina ${madrinaId}`);
 			return controles;
 		} catch (error) {
-			console.error('❌ ControlService: Error fetching overdue controls for madrina:', error);
+			log.error('ControlService: Error fetching overdue controls for madrina', { error: error.message });
 			throw error;
 		}
 	}
 
 	// NUEVO: Obtener controles pendientes (no realizados)
 	async getControlesPendientes() {
-		console.log('📋 ControlService: Fetching pending controls');
+		log.info('ControlService: Fetching pending controls');
 		
 		try {
 			// Obtener controles futuros (pendientes)
@@ -637,17 +650,17 @@ export class ControlService {
 				}
 			});
 			
-			console.log(`📋 ControlService: Found ${controles.length} pending controls`);
+			log.info(`ControlService: Found ${controles.length} pending controls`);
 			return controles;
 		} catch (error) {
-			console.error('❌ ControlService: Error fetching pending controls:', error);
+			log.error('ControlService: Error fetching pending controls', { error: error.message });
 			throw error;
 		}
 	}
 
 	// NUEVO: Obtener controles pendientes por madrina
 	async getControlesPendientesByMadrina(madrinaId: string) {
-		console.log(`📋 ControlService: Fetching pending controls for madrina ${madrinaId}`);
+		log.info(`ControlService: Fetching pending controls for madrina ${madrinaId}`);
 		
 		try {
 			// Primero obtener las gestantes asignadas a esta madrina
@@ -675,10 +688,10 @@ export class ControlService {
 				}
 			});
 			
-			console.log(`📋 ControlService: Found ${controles.length} pending controls for madrina ${madrinaId}`);
+			log.info(`ControlService: Found ${controles.length} pending controls for madrina ${madrinaId}`);
 			return controles;
 		} catch (error) {
-			console.error('❌ ControlService: Error fetching pending controls for madrina:', error);
+			log.error('ControlService: Error fetching pending controls for madrina', { error: error.message });
 			throw error;
 		}
 	}

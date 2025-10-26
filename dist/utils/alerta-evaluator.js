@@ -1,1 +1,0 @@
-"// Evaluador de alertas";

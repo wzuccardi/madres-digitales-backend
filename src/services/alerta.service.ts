@@ -21,7 +21,7 @@ export class AlertaService {
 
   constructor() {
     this.permissionService = new PermissionService();
-    console.log('🚨 AlertaService initialized with permissions');
+    log.info('AlertaService initialized with permissions');
   }
 
   /**
@@ -29,15 +29,14 @@ export class AlertaService {
    */
   async getAlertasByUser(userId: string) {
     try {
-      console.log(`🔍 AlertaService: Obteniendo alertas para usuario ${userId}`);
+      log.info(`AlertaService: Getting alerts for user ${userId}`);
       
       const alertas = await this.permissionService.filterAlertasByPermission(userId);
       
-      console.log(`✅ AlertaService: ${alertas.length} alertas obtenidas con permisos`);
+      log.info(`AlertaService: ${alertas.length} alerts obtained with permissions`);
       return alertas;
     } catch (error) {
-      console.error('❌ AlertaService: Error obteniendo alertas por usuario:', error);
-      log.error('Error obteniendo alertas por usuario', { error: error.message, userId });
+      log.error('AlertaService: Error getting alerts by user', { error: error.message, userId });
       throw new Error(`Error obteniendo alertas: ${error.message}`);
     }
   }
@@ -47,7 +46,7 @@ export class AlertaService {
    */
   async getAllAlertas() {
     try {
-      console.log('🔍 AlertaService: Fetching all alertas');
+      log.info('AlertaService: Fetching all alertas');
       
       const alertas = await prisma.alertas.findMany({
         include: {
@@ -80,10 +79,10 @@ export class AlertaService {
         ]
       });
 
-      console.log(`✅ AlertaService: Found ${alertas.length} alertas`);
+      log.info(`AlertaService: Found ${alertas.length} alertas`);
       return alertas;
     } catch (error) {
-      console.error('❌ AlertaService: Error fetching all alertas:', error);
+      log.error('AlertaService: Error fetching all alertas', { error: error.message });
       throw new Error(`Error obteniendo todas las alertas: ${error.message}`);
     }
   }
@@ -93,7 +92,7 @@ export class AlertaService {
    */
   async createAlerta(data: CreateAlertaData, userId: string) {
     try {
-      console.log(`🚨 AlertaService: Creando alerta para gestante ${data.gestante_id}`);
+      log.info(`AlertaService: Creating alert for gestante ${data.gestante_id}`);
 
       // Verificar permisos para crear alerta para esta gestante
       const canCreate = await this.permissionService.canCreateAlertaForGestante(userId, data.gestante_id);
@@ -102,7 +101,7 @@ export class AlertaService {
       }
 
       // Obtener información de la gestante para asignar madrina automáticamente
-      console.log('🔍 DEBUG: Verificando campos de gestante en la base de datos...');
+      log.debug('Verifying gestante fields in database');
       const gestante = await prisma.gestantes.findUnique({
         where: { id: data.gestante_id },
         select: {
@@ -114,11 +113,9 @@ export class AlertaService {
         }
       });
       
-      console.log('🔍 DEBUG: Campos de gestante encontrados:', {
+      log.debug('Gestante fields found', {
         madrina_id: gestante?.madrina_id,
         medico_tratante_id: gestante?.medico_tratante_id,
-        // Verificamos si existe medico_asignado_id (no debería existir)
-        medico_asignado_id: (gestante as any)?.medico_asignado_id
       });
 
       if (!gestante) {
@@ -167,20 +164,19 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Alerta creada con ID ${nuevaAlerta.id}`);
-      log.info('Alerta creada', { 
-        alertaId: nuevaAlerta.id, 
+      log.info(`AlertaService: Alert created with ID ${nuevaAlerta.id}`);
+      log.info('Alert created', {
+        alertaId: nuevaAlerta.id,
         gestanteId: data.gestante_id,
         tipo: data.tipo_alerta,
         prioridad: data.nivel_prioridad,
-        userId 
+        userId
       });
 
       return nuevaAlerta;
 
     } catch (error) {
-      console.error('❌ AlertaService: Error creando alerta:', error);
-      log.error('Error creando alerta', { error: error.message, data, userId });
+      log.error('AlertaService: Error creating alert', { error: error.message, data, userId });
       throw error;
     }
   }
@@ -190,7 +186,7 @@ export class AlertaService {
    */
   async getAlertaById(alertaId: string, userId: string) {
     try {
-      console.log(`🔍 AlertaService: Obteniendo alerta ${alertaId} para usuario ${userId}`);
+      log.info(`AlertaService: Getting alert ${alertaId} for user ${userId}`);
 
       const alerta = await prisma.alertas.findUnique({
         where: { id: alertaId },
@@ -222,12 +218,11 @@ export class AlertaService {
         throw new Error('No tiene permisos para acceder a esta alerta');
       }
 
-      console.log(`✅ AlertaService: Alerta ${alertaId} obtenida`);
+      log.info(`AlertaService: Alert ${alertaId} obtained`);
       return alerta;
 
     } catch (error) {
-      console.error('❌ AlertaService: Error obteniendo alerta por ID:', error);
-      log.error('Error obteniendo alerta por ID', { error: error.message, alertaId, userId });
+      log.error('AlertaService: Error getting alert by ID', { error: error.message, alertaId, userId });
       throw error;
     }
   }
@@ -237,7 +232,7 @@ export class AlertaService {
    */
   async resolverAlerta(alertaId: string, userId: string) {
     try {
-      console.log(`✅ AlertaService: Resolviendo alerta ${alertaId}`);
+      log.info(`AlertaService: Resolving alert ${alertaId}`);
 
       // Verificar que la alerta existe y el usuario tiene permisos
       const alerta = await this.getAlertaById(alertaId, userId);
@@ -257,8 +252,8 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Alerta ${alertaId} resuelta`);
-      log.info('Alerta resuelta', { alertaId, userId, gestanteId: alerta.gestante_id });
+      log.info(`AlertaService: Alert ${alertaId} resolved`);
+      log.info('Alert resolved', { alertaId, userId, gestanteId: alerta.gestante_id });
 
       // Notificar resolución via WebSocket
       try {
@@ -266,15 +261,14 @@ export class AlertaService {
         const notificationService = new NotificationService();
         await notificationService.notifyAlertUpdate(alertaId, 'resuelta');
       } catch (wsError) {
-        console.warn('⚠️ AlertaService: Error sending WebSocket notification:', wsError);
+        log.warn('AlertaService: Error sending WebSocket notification', { error: wsError.message });
         // No fallar la resolución por error en notificación
       }
 
       return alertaResuelta;
 
     } catch (error) {
-      console.error('❌ AlertaService: Error resolviendo alerta:', error);
-      log.error('Error resolviendo alerta', { error: error.message, alertaId, userId });
+      log.error('AlertaService: Error resolving alert', { error: error.message, alertaId, userId });
       throw error;
     }
   }
@@ -284,7 +278,7 @@ export class AlertaService {
    */
   async getAlertasByMadrina(madrinaId: string) {
     try {
-      console.log(`🔍 AlertaService: Fetching alertas for madrina ${madrinaId}`);
+      log.info(`AlertaService: Fetching alerts for madrina ${madrinaId}`);
       
       const alertas = await prisma.alertas.findMany({
         where: {
@@ -326,10 +320,10 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Found ${alertas.length} alertas for madrina ${madrinaId}`);
+      log.info(`AlertaService: Found ${alertas.length} alerts for madrina ${madrinaId}`);
       return alertas;
     } catch (error) {
-      console.error(`❌ AlertaService: Error fetching alertas for madrina ${madrinaId}:`, error);
+      log.error(`AlertaService: Error fetching alerts for madrina ${madrinaId}`, { error: error.message });
       throw new Error(`Error obteniendo alertas de madrina: ${error.message}`);
     }
   }
@@ -340,7 +334,7 @@ export class AlertaService {
    */
   async createAlertaCompleta(data: any) {
     try {
-      console.log('🚨 AlertaService: Creating complete alert with data:', data);
+      log.info('AlertaService: Creating complete alert', { data });
       
       // Validar que la gestante existe
       const gestante = await prisma.gestantes.findUnique({
@@ -351,10 +345,8 @@ export class AlertaService {
         throw new Error(`No se encontró gestante con ID ${data.gestante_id}`);
       }
 
-      // DEBUG: Verificar campos recibidos
-      console.log('🔍 DEBUG: Campos recibidos en createAlertaCompleta:', {
+      log.debug('Fields received in createAlertaCompleta', {
         madrina_id: data.madrina_id,
-        medico_asignado_id: data.medico_asignado_id,
         medico_tratante_id: data.medico_tratante_id
       });
 
@@ -375,7 +367,7 @@ export class AlertaService {
             coordinates: data.coordenadas
           } : null,
           resuelta: false
-        },
+        } as any,
         include: {
           gestante: {
             select: {
@@ -388,10 +380,10 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Alert created with ID: ${alerta.id}`);
+      log.info(`AlertaService: Alert created with ID: ${alerta.id}`);
       return alerta;
     } catch (error) {
-      console.error('❌ AlertaService: Error creating complete alert:', error);
+      log.error('AlertaService: Error creating complete alert', { error: error.message });
       throw error;
     }
   }
@@ -401,7 +393,7 @@ export class AlertaService {
    */
   async updateAlertaCompleta(id: string, data: any) {
     try {
-      console.log(`🚨 AlertaService: Updating alert ${id} with data:`, data);
+      log.info(`AlertaService: Updating alert ${id}`, { data });
       
       // Verificar que la alerta existe
       const alertaExistente = await prisma.alertas.findUnique({
@@ -429,7 +421,7 @@ export class AlertaService {
             type: 'Point',
             coordinates: data.coordenadas
           } : undefined
-        },
+        } as any,
         include: {
           gestante: {
             select: {
@@ -442,10 +434,10 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Alert ${id} updated successfully`);
+      log.info(`AlertaService: Alert ${id} updated successfully`);
       return alerta;
     } catch (error) {
-      console.error(`❌ AlertaService: Error updating alert ${id}:`, error);
+      log.error(`AlertaService: Error updating alert ${id}`, { error: error.message });
       throw error;
     }
   }
@@ -455,16 +447,16 @@ export class AlertaService {
    */
   async deleteAlerta(id: string) {
     try {
-      console.log(`🗑️ AlertaService: Deleting alert ${id}`);
+      log.info(`AlertaService: Deleting alert ${id}`);
       
       const alerta = await prisma.alertas.delete({
         where: { id }
       });
 
-      console.log(`✅ AlertaService: Alert ${id} deleted successfully`);
+      log.info(`AlertaService: Alert ${id} deleted successfully`);
       return alerta;
     } catch (error) {
-      console.error(`❌ AlertaService: Error deleting alert ${id}:`, error);
+      log.error(`AlertaService: Error deleting alert ${id}`, { error: error.message });
       throw new Error(`Error eliminando alerta: ${error.message}`);
     }
   }
@@ -474,7 +466,7 @@ export class AlertaService {
    */
   async getAlertasByGestante(gestanteId: string) {
     try {
-      console.log(`🔍 AlertaService: Fetching alertas for gestante ${gestanteId}`);
+      log.info(`AlertaService: Fetching alerts for gestante ${gestanteId}`);
       
       const alertas = await prisma.alertas.findMany({
         where: { gestante_id: gestanteId },
@@ -492,10 +484,10 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Found ${alertas.length} alertas for gestante ${gestanteId}`);
+      log.info(`AlertaService: Found ${alertas.length} alerts for gestante ${gestanteId}`);
       return alertas;
     } catch (error) {
-      console.error(`❌ AlertaService: Error fetching alertas for gestante ${gestanteId}:`, error);
+      log.error(`AlertaService: Error fetching alerts for gestante ${gestanteId}`, { error: error.message });
       throw new Error(`Error obteniendo alertas de gestante: ${error.message}`);
     }
   }
@@ -505,7 +497,7 @@ export class AlertaService {
    */
   async getAlertasActivas() {
     try {
-      console.log('🔍 AlertaService: Fetching active alertas');
+      log.info('AlertaService: Fetching active alertas');
       
       const alertas = await prisma.alertas.findMany({
         where: { resuelta: false },
@@ -538,10 +530,10 @@ export class AlertaService {
         }
       });
 
-      console.log(`✅ AlertaService: Found ${alertas.length} active alertas`);
+      log.info(`AlertaService: Found ${alertas.length} active alertas`);
       return alertas;
     } catch (error) {
-      console.error('❌ AlertaService: Error fetching active alertas:', error);
+      log.error('AlertaService: Error fetching active alertas', { error: error.message });
       throw new Error(`Error obteniendo alertas activas: ${error.message}`);
     }
   }
@@ -552,7 +544,7 @@ export class AlertaService {
    */
   async createAlertaConEvaluacion(data: any) {
     try {
-      console.log('🚨 AlertaService: Creating alert with evaluation');
+      log.info('AlertaService: Creating alert with evaluation');
       
       // Crear la alerta manual
       const alertaManual = await this.createAlerta(data, data.generado_por_id);
@@ -570,7 +562,7 @@ export class AlertaService {
         alerta_automatica: alertaAutomatica
       };
     } catch (error) {
-      console.error('❌ AlertaService: Error creating alert with evaluation:', error);
+      log.error('AlertaService: Error creating alert with evaluation', { error: error.message });
       throw error;
     }
   }
@@ -579,15 +571,14 @@ export class AlertaService {
    * Crear alerta SOS con notificaciones completas
    */
   async notificarEmergencia(gestanteId: string, coordenadas: [number, number]) {
-    console.log('🚨 AlertaService: Creating SOS emergency alert...');
-    console.log(`   Gestante ID: ${gestanteId}`);
-    console.log(`   Coordinates: [${coordenadas[0]}, ${coordenadas[1]}]`);
+    log.info('AlertaService: Creating SOS emergency alert');
+    log.info(`Gestante ID: ${gestanteId}`);
+    log.info(`Coordinates: [${coordenadas[0]}, ${coordenadas[1]}]`);
 
     const startTime = Date.now();
 
     try {
-      // DEBUG: Verificar campos de gestante en notificarEmergencia
-      console.log('🔍 DEBUG: Verificando gestante en notificarEmergencia');
+      log.debug('Verifying gestante in notificarEmergencia');
       const gestanteCompleta = await prisma.gestantes.findUnique({
         where: { id: gestanteId },
         include: {
@@ -606,10 +597,9 @@ export class AlertaService {
         },
       });
 
-      console.log('🔍 DEBUG: Campos de gestante en notificarEmergencia:', {
+      log.debug('Gestante fields in notificarEmergencia', {
         madrina_id: gestanteCompleta?.madrina_id,
         medico_tratante_id: gestanteCompleta?.medico_tratante_id,
-        medico_asignado_id: (gestanteCompleta as any)?.medico_asignado_id
       });
 
       if (!gestanteCompleta) {
@@ -645,18 +635,18 @@ export class AlertaService {
           } as any,
           resuelta: false,
           fecha_resolucion: null,
-        }
+        } as any
       });
 
-      console.log(`✅ AlertaService: SOS alert created with ID: ${alertaSOS.id}`);
+      log.info(`AlertaService: SOS alert created with ID: ${alertaSOS.id}`);
 
       const duration = Date.now() - startTime;
-      console.log(`⏱️ AlertaService: SOS alert created in ${duration}ms`);
+      log.info(`AlertaService: SOS alert created in ${duration}ms`);
 
       return alertaSOS;
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.error('❌ AlertaService: Error creating SOS alert:', error);
+      log.error('AlertaService: Error creating SOS alert', { error: error.message, duration });
       throw new Error(`Error creando alerta SOS: ${error}`);
     }
   }

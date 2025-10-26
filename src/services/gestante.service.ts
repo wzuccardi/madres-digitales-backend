@@ -2,6 +2,7 @@
 // Todos los datos provienen de la base de datos real, no se usan mocks
 import prisma from '../config/database';
 import { Prisma } from '@prisma/client';
+import { log } from '../config/logger';
 import type {
 	FiltrosGestanteDTO,
 	RespuestaPaginada,
@@ -12,18 +13,18 @@ import type {
 export class GestanteService {
 	// MÉTODO ORIGINAL - SOLO PARA ADMINISTRADORES
 	async getAllGestantes() {
-		console.log('🤰 GestanteService: Fetching all gestantes (ADMIN ONLY)...');
+		log.info('GestanteService: Fetching all gestantes (ADMIN ONLY)');
 		const gestantes = await prisma.gestantes.findMany({
 			orderBy: { fecha_creacion: 'desc' }
 		});
-		console.log(`🤰 GestanteService: Found ${gestantes.length} gestantes`);
+		log.info(`GestanteService: Found ${gestantes.length} gestantes`);
 		return gestantes;
 	}
 
 	// NUEVO MÉTODO - FILTRADO POR MADRINA (SEGURIDAD)
 	async getGestantesByMadrina(madrinaId: string) {
-		console.log(`🤰 GestanteService: Fetching gestantes for madrina ${madrinaId}...`);
-		const gestantes = await prisma.gestante.findMany({
+		log.info(`GestanteService: Fetching gestantes for madrina ${madrinaId}`);
+		const gestantes = await prisma.gestantes.findMany({
 			where: {
 				madrina_id: madrinaId // FILTRO CRÍTICO DE SEGURIDAD
 			},
@@ -39,7 +40,7 @@ export class GestanteService {
 			} as any,
 			orderBy: { fecha_creacion: 'desc' }
 		});
-		console.log(`🤰 GestanteService: Found ${gestantes.length} gestantes for madrina ${madrinaId}`);
+		log.info(`GestanteService: Found ${gestantes.length} gestantes for madrina ${madrinaId}`);
 		return gestantes;
 	}
 
@@ -47,7 +48,7 @@ export class GestanteService {
 		return prisma.gestantes.findUnique({
 			where: { id },
 			include: {
-				municipio: true,
+				municipios: true,
 				madrina: {
 					select: {
 						id: true,
@@ -98,8 +99,8 @@ export class GestanteService {
 
 	// Método para crear gestante con validaciones completas
 	async createGestanteCompleta(data: any) {
-		console.log('🤰 GestanteService: Creating new gestante...');
-		console.log('   Data received:', data);
+		log.info('GestanteService: Creating new gestante');
+		log.debug('Data received', { data });
 
 		try {
 			// Validar que el documento no exista
@@ -128,41 +129,39 @@ export class GestanteService {
 			}
 
 			// Crear la gestante
-			const newGestante = await prisma.gestante.create({
+			const newGestante = await prisma.gestantes.create({
 				data: {
 					documento: data.documento,
 					tipo_documento: data.tipo_documento || 'cedula',
 					nombre: data.nombre,
 					fecha_nacimiento: data.fecha_nacimiento ? new Date(data.fecha_nacimiento) : new Date(),
-					telefono: data.telefono || null,
-					direccion: data.direccion || null,
-					coordenadas: coordenadas as any,
-					municipio_id: data.municipio_id || null,
-					madrina_id: data.madrina_id || null,
-					ips_asignada_id: data.ips_asignada_id || null,
-					medico_tratante_id: data.medico_tratante_id || null,
-					eps: data.eps || null,
+					telefono: data.telefono,
+					direccion: data.direccion,
+					coordenadas: coordenadas,
+					municipio_id: data.municipio_id,
+					madrina_id: data.madrina_id,
+					ips_asignada_id: data.ips_asignada_id,
+					medico_tratante_id: data.medico_tratante_id,
+					eps: data.eps,
 					regimen_salud: data.regimen_salud || 'subsidiado',
 					fecha_ultima_menstruacion: data.fecha_ultima_menstruacion ? new Date(data.fecha_ultima_menstruacion) : null,
 					fecha_probable_parto: fechaProbableParto ? new Date(fechaProbableParto) : null,
-					// peso_actual: data.peso_actual || null, // Campo no existe en el esquema
-					// talla: data.talla || null, // Campo no existe en el esquema
 					activa: data.activa !== undefined ? data.activa : true,
-				},
+				} as any,
 			}) as any;
 
-			console.log(`✅ GestanteService: Gestante created with ID: ${newGestante.id}`);
+			log.info(`GestanteService: Gestante created with ID: ${newGestante.id}`);
 			return newGestante;
 		} catch (error) {
-			console.error('❌ GestanteService: Error creating gestante:', error);
+			log.error('GestanteService: Error creating gestante', { error: error.message });
 			throw error;
 		}
 	}
 
 	// Método para actualizar gestante con validaciones
 	async updateGestanteCompleta(id: string, data: any) {
-		console.log(`🤰 GestanteService: Updating gestante ${id}...`);
-		console.log('   Data received:', data);
+		log.info(`GestanteService: Updating gestante ${id}`);
+		log.debug('Data received', { data });
 
 		try {
 			// Verificar que la gestante existe
@@ -189,7 +188,7 @@ export class GestanteService {
 			}
 
 			// Actualizar la gestante
-			const updatedGestante = await prisma.gestante.update({
+			const updatedGestante = await prisma.gestantes.update({
 				where: { id },
 				data: {
 					documento: data.documento || existingGestante.documento,
@@ -208,10 +207,10 @@ export class GestanteService {
 				}
 			});
 
-			console.log(`✅ GestanteService: Gestante ${id} updated successfully`);
+			log.info(`GestanteService: Gestante ${id} updated successfully`);
 			return updatedGestante;
 		} catch (error) {
-			console.error(`❌ GestanteService: Error updating gestante ${id}:`, error);
+			log.error(`GestanteService: Error updating gestante ${id}`, { error: error.message });
 			throw error;
 		}
 	}
@@ -220,7 +219,7 @@ export class GestanteService {
 	 * Búsqueda avanzada con filtros y paginación
 	 */
 	async buscarGestantes(filtros: FiltrosGestanteDTO): Promise<RespuestaPaginada<any>> {
-		console.log('🔍 GestanteService: Searching gestantes with filters:', filtros);
+		log.info('GestanteService: Searching gestantes with filters', { filtros });
 
 		try {
 			// Construir condiciones WHERE
@@ -295,14 +294,14 @@ export class GestanteService {
 			orderBy[orderField] = orderDirection;
 
 			// Ejecutar consulta
-			const gestantes = await prisma.gestante.findMany({
+			const gestantes = await prisma.gestantes.findMany({
 				where,
 				orderBy,
 				skip,
 				take: limit,
 			});
 
-			console.log(`✅ GestanteService: Found ${gestantes.length} gestantes (${total} total)`);
+			log.info(`GestanteService: Found ${gestantes.length} gestantes (${total} total)`);
 
 			return {
 				data: gestantes,
@@ -316,7 +315,7 @@ export class GestanteService {
 				}
 			};
 		} catch (error) {
-			console.error('❌ GestanteService: Error searching gestantes:', error);
+			log.error('GestanteService: Error searching gestantes', { error: error.message });
 			throw error;
 		}
 	}
@@ -325,7 +324,7 @@ export class GestanteService {
 	 * Búsqueda geográfica de gestantes cercanas
 	 */
 	async buscarGestantesCercanas(params: BusquedaGeograficaDTO): Promise<any[]> {
-		console.log('📍 GestanteService: Searching nearby gestantes:', params);
+		log.info('GestanteService: Searching nearby gestantes', { params });
 
 		try {
 			// Usar PostGIS para búsqueda geográfica
@@ -354,12 +353,12 @@ export class GestanteService {
 				LIMIT ${limit}
 			`;
 
-			console.log(`✅ GestanteService: Found ${gestantes.length} nearby gestantes`);
+			log.info(`GestanteService: Found ${gestantes.length} nearby gestantes`);
 
 			// Convertir distancia a km y agregar información adicional
 			const gestantesConInfo = await Promise.all(
 				gestantes.map(async (g) => {
-					const gestanteCompleta = await prisma.gestante.findUnique({
+					const gestanteCompleta = await prisma.gestantes.findUnique({
 						where: { id: g.id },
 						include: {
 							municipio: true,
@@ -382,7 +381,7 @@ export class GestanteService {
 
 			return gestantesConInfo;
 		} catch (error) {
-			console.error('❌ GestanteService: Error searching nearby gestantes:', error);
+			log.error('GestanteService: Error searching nearby gestantes', { error: error.message });
 			throw error;
 		}
 	}
@@ -391,7 +390,7 @@ export class GestanteService {
 	 * Asignar madrina a gestante
 	 */
 	async asignarMadrina(gestanteId: string, madrinaId: string) {
-		console.log(`👩‍⚕️ GestanteService: Assigning madrina ${madrinaId} to gestante ${gestanteId}`);
+		log.info(`GestanteService: Assigning madrina ${madrinaId} to gestante ${gestanteId}`);
 
 		try {
 			// Verificar que la gestante existe
@@ -417,7 +416,7 @@ export class GestanteService {
 			}
 
 			// Asignar madrina
-			const updatedGestante = await prisma.gestante.update({
+			const updatedGestante = await prisma.gestantes.update({
 				where: { id: gestanteId },
 				data: { madrina_id: madrinaId },
 				include: {
@@ -431,10 +430,10 @@ export class GestanteService {
 				} as any
 			});
 
-			console.log(`✅ GestanteService: Madrina assigned successfully`);
+			log.info(`GestanteService: Madrina assigned successfully`);
 			return updatedGestante;
 		} catch (error) {
-			console.error('❌ GestanteService: Error assigning madrina:', error);
+			log.error('GestanteService: Error assigning madrina', { error: error.message });
 			throw error;
 		}
 	}
@@ -443,10 +442,10 @@ export class GestanteService {
 	 * Calcular riesgo de gestante
 	 */
 	async calcularRiesgo(gestanteId: string): Promise<RiesgoGestante> {
-		console.log(`⚠️ GestanteService: Calculating risk for gestante ${gestanteId}`);
+		log.info(`GestanteService: Calculating risk for gestante ${gestanteId}`);
 
 		try {
-			const gestante = await prisma.gestante.findUnique({
+			const gestante = await prisma.gestantes.findUnique({
 				where: { id: gestanteId },
 				include: {
 					controles: {
@@ -533,7 +532,7 @@ export class GestanteService {
 			// Actualizar riesgo_alto en la base de datos
 			// No se actualiza riesgo_alto porque el campo no existe en el schema
 
-			console.log(`✅ GestanteService: Risk calculated - Level: ${nivelRiesgo}, Score: ${puntuacion}`);
+			log.info(`GestanteService: Risk calculated - Level: ${nivelRiesgo}, Score: ${puntuacion}`);
 
 			return {
 				gestante_id: gestanteId,
@@ -544,7 +543,7 @@ export class GestanteService {
 				requiere_atencion_inmediata: requiereAtencionInmediata,
 			};
 		} catch (error) {
-			console.error('❌ GestanteService: Error calculating risk:', error);
+			log.error('GestanteService: Error calculating risk', { error: error.message });
 			throw error;
 		}
 	}
@@ -553,7 +552,7 @@ export class GestanteService {
 	 * Obtener gestantes disponibles para alertas (filtrado por permisos)
 	 */
 	async getGestantesDisponiblesParaAlertas(userId: string) {
-		console.log(`🔍 GestanteService: Getting available gestantes for alerts for user ${userId}`);
+		log.info(`GestanteService: Getting available gestantes for alerts for user ${userId}`);
 
 		try {
 			// Importar PermissionService aquí para evitar dependencias circulares
@@ -584,11 +583,11 @@ export class GestanteService {
 					fecha_probable_parto: gestante.fecha_probable_parto
 				}));
 
-			console.log(`✅ GestanteService: Found ${gestantesParaAlertas.length} available gestantes for alerts`);
+			log.info(`GestanteService: Found ${gestantesParaAlertas.length} available gestantes for alerts`);
 			return gestantesParaAlertas;
 
 		} catch (error) {
-			console.error('❌ GestanteService: Error getting available gestantes for alerts:', error);
+			log.error('GestanteService: Error getting available gestantes for alerts', { error: error.message });
 			throw error;
 		}
 	}

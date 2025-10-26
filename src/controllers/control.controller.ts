@@ -8,10 +8,18 @@ const controlService = new ControlService();
 
 export const getAllControles = async (req: Request, res: Response) => {
 	try {
+		// 🔍 DEBUG: Analizar autenticación doble
+		console.log('🔍 DEBUG: Iniciando getAllControles...');
+		console.log('🔍 DEBUG: Headers de autenticación:', {
+			authorization: req.headers.authorization ? 'PRESENT' : 'ABSENT',
+			user: (req as any).user ? 'PRESENT' : 'ABSENT'
+		});
+		
 		// IMPLEMENTACIÓN DE SEGURIDAD: Filtrar por madrina o mostrar todas si es admin
 		const user = await getUserForFiltering(req);
 
 		console.log(`🔐 Controller: Fetching controles for user ${user.id} with role ${user.rol}`);
+		console.log('🔍 DEBUG: Usuario obtenido de getUserForFiltering:', user);
 
 		let controles;
 		if (canViewAllData(user.rol)) {

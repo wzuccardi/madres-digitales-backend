@@ -7,6 +7,56 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enums para mejorar seguridad de tipos
+enum TipoAlerta {
+  SOS_MEDICA
+  CONTROL_VENCIDO
+  SINTOMAS_PREOCUPANTES
+  RECORDATORIO_CONTROL
+  EMERGENCIA
+  SEGUIMIENTO
+}
+
+enum NivelPrioridad {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum CategoriaContenido {
+  NUTRICION
+  EJERCICIO
+  CUIDADO_PERSONAL
+  PREPARACION_PARTO
+  LACTANCIA
+  SALUD_MENTAL
+  DESARROLLO_FETAL
+}
+
+enum TipoContenido {
+  ARTICULO
+  VIDEO
+  PODCAST
+  INFOGRAFIA
+  GUIA
+  CHECKLIST
+}
+
+enum NivelDificultad {
+  PRINCIPIANTE
+  INTERMEDIO
+  AVANZADO
+}
+
+enum RolUsuario {
+  ADMIN
+  COORDINADOR
+  MADRINA
+  MEDICO
+  SUPER_ADMIN
+}
+
 model usuarios {
   id                  String    @id
   nombre              String
@@ -14,7 +64,7 @@ model usuarios {
   password_hash       String
   documento           String?
   tipo_documento      String?   @default("cedula")
-  rol                 String
+  rol                 RolUsuario
   municipio_id        String?
   telefono            String?
   activo              Boolean   @default(true)
@@ -29,6 +79,7 @@ model usuarios {
   gestantes_madrina   gestantes[] @relation("GestantesMadrina")
 
   @@map("usuarios")
+  @@index([municipio_id, rol], map: "idx_usuarios_municipio_rol")
 }
 
 model municipios {
@@ -98,6 +149,8 @@ model medicos {
   ips                 ips?        @relation(fields: [ips_id], references: [id])
   municipios          municipios? @relation(fields: [municipio_id], references: [id])
   gestantes           gestantes[]
+  alertas_asignadas   alertas[]   @relation("AlertasMedicoAsignado")
+  control_prenatal    control_prenatal[]
 
   @@map("medicos")
 }
@@ -132,8 +185,10 @@ model gestantes {
   alertas                   alertas[]
   contactos_emergencia      contactos_emergencia[]
   seguimiento_emergencia    seguimiento_emergencia[]
+  control_prenatal           control_prenatal[]
 
   @@map("gestantes")
+  @@index([madrina_id], map: "idx_gestantes_madrina")
 }
 
 model alertas {
@@ -142,8 +197,8 @@ model alertas {
   madrina_id             String?
   medico_asignado_id     String?
   ips_derivada_id        String?
-  tipo_alerta            String
-  nivel_prioridad        String
+  tipo_alerta            TipoAlerta
+  nivel_prioridad        NivelPrioridad
   mensaje                String
   sintomas               Json?
   coordenadas_alerta     Json?
@@ -160,9 +215,11 @@ model alertas {
   // Relaciones
   gestante               gestantes                @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
   madrina                usuarios?                @relation("AlertasMadrina", fields: [madrina_id], references: [id])
+  medico_asignado        medicos?                 @relation("AlertasMedicoAsignado", fields: [medico_asignado_id], references: [id])
   seguimiento_emergencia seguimiento_emergencia[]
 
   @@map("alertas")
+  @@index([madrina_id, fecha_creacion(sort: Desc)], map: "idx_alertas_madrina_fecha")
 }
 
 
@@ -206,7 +263,7 @@ model contenidos {
   id                         String               @id
   titulo                     String
   descripcion                String?
-  categoria                  String
+  categoria                  CategoriaContenido
   url_contenido              String?
   url_imagen                 String?
   duracion_minutos           Int?
@@ -215,11 +272,11 @@ model contenidos {
   fecha_actualizacion        DateTime             @updatedAt
   destacado                  Boolean              @default(false)
   destacadoEnSemanaGestacion Boolean?             @default(false)
-  nivel                      String?
+  nivel                      NivelDificultad?
   semana_gestacion_fin       Int?
   semana_gestacion_inicio    Int?
   tags                       Json?
-  tipo                       String
+  tipo                       TipoContenido
   url_video                  String?
 
   // Relaciones
@@ -412,31 +469,35 @@ model logs {
 }
 
 model control_prenatal {
-  id                    String    @id
-  gestante_id           String
-  medico_id             String?
-  fecha_control          DateTime  @db.Timestamp(3)
-  semanas_gestacion     Int?
-  peso                  Float?
-  altura_uterina        Float?
-  presion_sistolica     Int?
-  presion_diastolica    Int?
-  frecuencia_cardiaca    Int?
-  frecuencia_respiratoria Int?
-  temperatura           Float?
-  movimientos_fetales   String?
-  edemas                String?
-  proteinuria           String?
-  glucosuria            String?
-  hallazgos             Json?
-  recomendaciones        String?
-  proximo_control       DateTime? @db.Timestamp(3)
-  realizado             Boolean   @default(false)
-  observaciones          String?
-  examenes_solicitados  Json?
-  resultados_examenes    Json?
-  fecha_creacion        DateTime  @default(now()) @db.Timestamp(3)
-  fecha_actualizacion    DateTime  @updatedAt @db.Timestamp(3)
-
-  @@map("control_prenatal")
+    id                    String    @id
+    gestante_id           String
+    medico_id             String?
+    fecha_control          DateTime  @db.Timestamp(3)
+    semanas_gestacion     Int?
+    peso                  Float?
+    altura_uterina        Float?
+    presion_sistolica     Int?
+    presion_diastolica    Int?
+    frecuencia_cardiaca    Int?
+    frecuencia_respiratoria Int?
+    temperatura           Float?
+    movimientos_fetales   String?
+    edemas                String?
+    proteinuria           String?
+    glucosuria            String?
+    hallazgos             Json?
+    recomendaciones        String?
+    proximo_control       DateTime? @db.Timestamp(3)
+    realizado             Boolean   @default(false)
+    observaciones          String?
+    examenes_solicitados  Json?
+    resultados_examenes    Json?
+    fecha_creacion        DateTime  @default(now()) @db.Timestamp(3)
+    fecha_actualizacion    DateTime  @updatedAt @db.Timestamp(3)
+    
+    // Relaciones
+    gestante              gestantes? @relation(fields: [gestante_id], references: [id])
+    medico                medicos?  @relation(fields: [medico_id], references: [id])
+    
+    @@map("control_prenatal")
 }

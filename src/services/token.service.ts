@@ -11,7 +11,7 @@ export class TokenService {
   private readonly ACCESS_TOKEN_EXPIRY = '7d';
   private readonly REFRESH_TOKEN_EXPIRY = '30d';
   
-  // NUEVO: Mapa para controlar refresh tokens concurrentes
+  // Mapa para controlar refresh tokens concurrentes
   private readonly _refreshTokenLocks = new Map<string, Promise<{ accessToken: string; refreshToken: string }>>();
 
   constructor() {
@@ -27,7 +27,7 @@ export class TokenService {
    * Renueva el access token usando un refresh token con control de concurrencia
    */
   async refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-    // NUEVO: Extraer userId del token sin verificarlo para el lock
+    // Extraer userId del token sin verificarlo para el lock
     let userId: string;
     try {
       const decoded = jwt.decode(refreshToken) as any;
@@ -37,7 +37,7 @@ export class TokenService {
       throw new UnauthorizedError('Refresh token inválido');
     }
 
-    // NUEVO: Verificar si ya hay un refresh en progreso para este usuario
+    // Verificar si ya hay un refresh en progreso para este usuario
     if (this._refreshTokenLocks.has(userId)) {
       log.auth('Refresh en progreso para usuario', { userId });
       try {
@@ -49,22 +49,22 @@ export class TokenService {
       }
     }
 
-    // NUEVO: Crear promise de refresh y almacenarla
+    // Crear promise de refresh y almacenarla
     const refreshPromise = this._executeRefreshAccessToken(refreshToken);
     this._refreshTokenLocks.set(userId, refreshPromise);
 
     try {
-      // NUEVO: Ejecutar refresh y retornar resultado
+      // Ejecutar refresh y retornar resultado
       const result = await refreshPromise;
       return result;
     } finally {
-      // NUEVO: Liberar lock
+      // Liberar lock
       this._refreshTokenLocks.delete(userId);
     }
   }
 
   /**
-   * NUEVO: Método interno para ejecutar el refresh token
+   * Método interno para ejecutar el refresh token
    */
   private async _executeRefreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
     const startTime = Date.now();
@@ -81,10 +81,17 @@ export class TokenService {
       }
 
       // 3. Obtener datos actualizados del usuario
-      const user = await prisma.usuario.findUnique({
+      // Verificando nombre de tabla correcto
+      log.debug('Searching user with ID', { userId: payload.id });
+      const user = await prisma.usuarios.findUnique({
         where: { id: payload.id },
         select: { id: true, email: true, rol: true, activo: true },
       });
+      
+      log.debug('User found', { found: !!user });
+      if (user) {
+        log.debug('User data', { id: user.id, email: user.email, rol: user.rol, activo: user.activo });
+      }
 
       if (!user || !user.activo) {
         log.security('Usuario no encontrado o inactivo', { userId: payload.id });
@@ -196,7 +203,7 @@ export class TokenService {
   async saveRefreshToken(userId: string, refreshToken: string): Promise<void> {
     try {
       // Actualizar el refresh token del usuario
-      await prisma.usuario.update({
+      await prisma.usuarios.update({
         where: { id: userId },
         data: {
           refresh_token: refreshToken,
@@ -216,7 +223,7 @@ export class TokenService {
    */
   async validateRefreshToken(userId: string, refreshToken: string): Promise<boolean> {
     try {
-      const user = await prisma.usuario.findUnique({
+      const user = await prisma.usuarios.findUnique({
         where: { id: userId },
         select: { refresh_token: true },
       });
@@ -264,7 +271,7 @@ export class TokenService {
    */
   async revokeRefreshTokens(userId: string): Promise<void> {
     try {
-      await prisma.usuario.update({
+      await prisma.usuarios.update({
         where: { id: userId },
         data: {
           refresh_token: null,
