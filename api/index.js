@@ -49,9 +49,9 @@ app.get('/health', (req, res) => {
 // Auth endpoints
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
-  
+
   console.log('🔐 Login attempt:', { email, hasPassword: !!password });
-  
+
   if (!email || !password) {
     return res.status(400).json({
       success: false,
@@ -60,6 +60,21 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // Demo login - accept any credentials and return super_admin role
+  // Generate a proper JWT-like token with expiration
+  const tokenPayload = {
+    id: 'demo-user',
+    email: email,
+    rol: 'super_admin',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+  };
+
+  // Create a simple JWT-like token (for demo purposes)
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
+  const signature = Buffer.from('demo-signature').toString('base64url');
+  const demoToken = `${header}.${payload}.${signature}`;
+
   const response = {
     success: true,
     message: 'Login exitoso',
@@ -70,10 +85,11 @@ app.post('/api/auth/login', (req, res) => {
         email: email,
         rol: 'super_admin'
       },
-      token: 'demo-jwt-token'
+      token: demoToken,
+      refreshToken: `refresh-${Date.now()}`
     }
   };
-  
+
   console.log('✅ Login successful for:', email);
   res.json(response);
 });
@@ -98,7 +114,7 @@ app.put('/api/auth/profile', (req, res) => {
 app.get('/api/dashboard/estadisticas', async (req, res) => {
   try {
     console.log('📊 Obteniendo estadísticas reales de la base de datos...');
-    
+
     // Obtener datos reales de la base de datos
     const [
       totalGestantes,
@@ -115,13 +131,13 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
       prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
       prisma.alertas.count({ where: { resuelta: false } }),
       prisma.control_prenatal.count({ where: { realizado: true } }),
-      prisma.control_prenatal.count({ 
-        where: { 
+      prisma.control_prenatal.count({
+        where: {
           fecha_control: {
             gte: new Date(new Date().setHours(0, 0, 0, 0)),
             lt: new Date(new Date().setHours(23, 59, 59, 999))
           }
-        } 
+        }
       })
     ]);
 
@@ -166,7 +182,7 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
 app.get('/api/ips', async (req, res) => {
   try {
     console.log('🏥 Obteniendo IPS reales de la base de datos...');
-    
+
     const ips = await prisma.ips.findMany({
       where: { activo: true },
       include: {
@@ -216,7 +232,7 @@ app.get('/api/ips', async (req, res) => {
 app.get('/api/gestantes', async (req, res) => {
   try {
     console.log('🤰 Obteniendo gestantes reales de la base de datos...');
-    
+
     const gestantes = await prisma.gestantes.findMany({
       where: { activa: true },
       include: {
@@ -232,7 +248,7 @@ app.get('/api/gestantes', async (req, res) => {
 
     const gestantesFormateadas = gestantes.map(gestante => {
       // Calcular edad
-      const edad = gestante.fecha_nacimiento 
+      const edad = gestante.fecha_nacimiento
         ? Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000))
         : null;
 
@@ -244,7 +260,7 @@ app.get('/api/gestantes', async (req, res) => {
       }
 
       // Último control
-      const ultimoControl = gestante.control_prenatal.length > 0 
+      const ultimoControl = gestante.control_prenatal.length > 0
         ? gestante.control_prenatal[0].fecha_control.toISOString().split('T')[0]
         : null;
 
@@ -286,7 +302,7 @@ app.get('/api/gestantes', async (req, res) => {
 app.get('/api/medicos', async (req, res) => {
   try {
     console.log('👨‍⚕️ Obteniendo médicos reales de la base de datos...');
-    
+
     const medicos = await prisma.medicos.findMany({
       where: { activo: true },
       include: {
@@ -335,7 +351,7 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
     const skip = (page - 1) * limit;
 
     console.log('🚨 Obteniendo alertas reales de la base de datos...');
-    
+
     const [alertas, totalAlertas] = await Promise.all([
       prisma.alertas.findMany({
         skip,
@@ -394,62 +410,182 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
   }
 });
 
-// Database status endpoint
+// Database status endpoint - SIMPLIFIED VERSION
 app.get('/api/database/status', async (req, res) => {
   try {
-    console.log('🔍 Obteniendo estado de la base de datos...');
-    
-    const [
-      totalUsuarios,
-      totalMunicipios,
-      totalIps,
-      totalMedicos,
-      totalGestantes,
-      totalAlertas,
-      totalControles,
-      gestantesActivas,
-      controlesRealizados,
-      alertasActivas
-    ] = await Promise.all([
-      prisma.usuarios.count(),
-      prisma.municipios.count(),
-      prisma.ips.count(),
-      prisma.medicos.count(),
-      prisma.gestantes.count(),
-      prisma.alertas.count(),
-      prisma.control_prenatal.count(),
-      prisma.gestantes.count({ where: { activa: true } }),
-      prisma.control_prenatal.count({ where: { realizado: true } }),
-      prisma.alertas.count({ where: { resuelta: false } })
-    ]);
+    console.log('🔍 Database status endpoint called...');
 
-    const databaseStatus = {
-      totalUsuarios,
-      totalMunicipios,
-      totalIps,
-      totalMedicos,
-      totalGestantes,
-      totalAlertas,
-      totalControles,
-      gestantesActivas,
-      controlesRealizados,
-      alertasActivas,
-      timestamp: new Date().toISOString()
-    };
+    // Start with just one simple query
+    const totalUsuarios = await prisma.usuarios.count();
 
-    console.log('📊 Estado de la BD obtenido:', databaseStatus);
+    console.log('📊 Simple query successful:', totalUsuarios);
 
     res.json({
       success: true,
-      data: databaseStatus
+      data: {
+        totalUsuarios,
+        message: 'Database status endpoint working',
+        timestamp: new Date().toISOString()
+      }
     });
   } catch (error) {
-    console.error('❌ Error obteniendo estado de la BD:', error);
+    console.error('❌ Error in database status:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo estado de la base de datos: ' + error.message
+      error: 'Database status error: ' + error.message
     });
   }
+});
+
+// Controles endpoint - REQUIRED BY FLUTTER APP
+app.get('/api/controles', async (req, res) => {
+  try {
+    console.log('🩺 Obteniendo controles prenatales...');
+
+    const controles = await prisma.control_prenatal.findMany({
+      include: {
+        gestante: {
+          select: {
+            nombre: true,
+            documento: true
+          }
+        },
+        medico: {
+          select: {
+            nombre: true,
+            especialidad: true
+          }
+        }
+      },
+      orderBy: { fecha_control: 'desc' }
+    });
+
+    const controlesFormateados = controles.map(control => ({
+      id: control.id,
+      gestante: {
+        nombre: control.gestante.nombre,
+        documento: control.gestante.documento
+      },
+      medico: control.medico ? {
+        nombre: control.medico.nombre,
+        especialidad: control.medico.especialidad
+      } : null,
+      fechaControl: control.fecha_control.toISOString().split('T')[0],
+      semanasGestacion: control.semanas_gestacion,
+      peso: control.peso,
+      alturaUterina: control.altura_uterina,
+      presionSistolica: control.presion_sistolica,
+      presionDiastolica: control.presion_diastolica,
+      realizado: control.realizado,
+      recomendaciones: control.recomendaciones,
+      proximoControl: control.proximo_control ? control.proximo_control.toISOString().split('T')[0] : null
+    }));
+
+    console.log(`🩺 Encontrados ${controlesFormateados.length} controles`);
+
+    res.json({
+      success: true,
+      data: controlesFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo controles:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo controles: ' + error.message
+    });
+  }
+});
+
+// Contenido CRUD endpoint - REQUIRED BY FLUTTER APP
+app.get('/api/contenido-crud', async (req, res) => {
+  try {
+    const { categoria } = req.query;
+    console.log('📚 Obteniendo contenido, categoría:', categoria);
+
+    const whereClause = categoria ? { categoria: categoria.toUpperCase() } : {};
+
+    const contenidos = await prisma.contenidos.findMany({
+      where: {
+        activo: true,
+        ...whereClause
+      },
+      orderBy: { fecha_creacion: 'desc' }
+    });
+
+    const contenidosFormateados = contenidos.map(contenido => ({
+      id: contenido.id,
+      titulo: contenido.titulo,
+      descripcion: contenido.descripcion,
+      categoria: contenido.categoria,
+      tipo: contenido.tipo,
+      urlContenido: contenido.url_contenido,
+      urlImagen: contenido.url_imagen,
+      urlVideo: contenido.url_video,
+      duracionMinutos: contenido.duracion_minutos,
+      destacado: contenido.destacado,
+      nivel: contenido.nivel,
+      semanaGestacionInicio: contenido.semana_gestacion_inicio,
+      semanaGestacionFin: contenido.semana_gestacion_fin,
+      tags: contenido.tags,
+      fechaCreacion: contenido.fecha_creacion.toISOString().split('T')[0]
+    }));
+
+    console.log(`📚 Encontrados ${contenidosFormateados.length} contenidos`);
+
+    res.json({
+      success: true,
+      data: contenidosFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo contenido:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo contenido: ' + error.message
+    });
+  }
+});
+
+// Auth refresh endpoint - REQUIRED BY FLUTTER APP
+app.post('/api/auth/refresh', (req, res) => {
+  console.log('🔄 Token refresh request');
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(400).json({
+      success: false,
+      error: 'Refresh token requerido'
+    });
+  }
+
+  // Generate a new JWT-like token
+  const tokenPayload = {
+    id: 'demo-user',
+    email: 'demo@example.com',
+    rol: 'super_admin',
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+  };
+
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
+  const signature = Buffer.from('demo-signature-refreshed').toString('base64url');
+  const newToken = `${header}.${payload}.${signature}`;
+
+  res.json({
+    success: true,
+    message: 'Token renovado exitosamente',
+    data: {
+      token: newToken,
+      refreshToken: `refresh-${Date.now()}`,
+      expiresIn: 3600,
+      user: {
+        id: 'demo-user',
+        nombre: 'Usuario Demo',
+        email: 'demo@example.com',
+        rol: 'super_admin'
+      }
+    }
+  });
 });
 
 // Basic reports endpoint
@@ -501,6 +637,15 @@ app.use((err, req, res, next) => {
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
+
+// Start server for local development
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  });
+}
 
 // Export for Vercel
 module.exports = app;
