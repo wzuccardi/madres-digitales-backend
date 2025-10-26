@@ -115,8 +115,8 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
       prisma.ips.count({ where: { activo: true } }),
       prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
       prisma.alertas.count({ where: { resuelta: false } }),
-      prisma.controles.count({ where: { realizado: true } }),
-      prisma.controles.count({ 
+      prisma.control_prenatal.count({ where: { realizado: true } }),
+      prisma.control_prenatal.count({ 
         where: { 
           fecha_control: {
             gte: new Date(new Date().setHours(0, 0, 0, 0)),
@@ -127,7 +127,7 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
     ]);
 
     // Calcular próximas citas (controles programados para los próximos 7 días)
-    const proximosCitas = await prisma.controles.count({
+    const proximosCitas = await prisma.control_prenatal.count({
       where: {
         realizado: false,
         fecha_control: {
@@ -396,8 +396,9 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
 // Endpoint para consulta completa de la base de datos
 app.get('/api/database/status', async (req, res) => {
   try {
-    console.log('🔍 Realizando consulta completa de la base de datos...');
+    console.log('🔍 Obteniendo estado de la base de datos...');
     
+    // Obtener datos básicos de la base de datos usando el patrón que funciona
     const [
       totalUsuarios,
       totalMunicipios,
@@ -406,13 +407,9 @@ app.get('/api/database/status', async (req, res) => {
       totalGestantes,
       totalAlertas,
       totalControles,
-      totalContenidos,
       gestantesActivas,
-      gestantesAltoRiesgo,
-      alertasActivas,
       controlesRealizados,
-      medicosActivos,
-      ipsActivas
+      alertasActivas
     ] = await Promise.all([
       prisma.usuarios.count(),
       prisma.municipios.count(),
@@ -421,105 +418,36 @@ app.get('/api/database/status', async (req, res) => {
       prisma.gestantes.count(),
       prisma.alertas.count(),
       prisma.control_prenatal.count(),
-      prisma.contenidos.count(),
       prisma.gestantes.count({ where: { activa: true } }),
-      prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
-      prisma.alertas.count({ where: { resuelta: false } }),
       prisma.control_prenatal.count({ where: { realizado: true } }),
-      prisma.medicos.count({ where: { activo: true } }),
-      prisma.ips.count({ where: { activo: true } })
-    ]);
-
-    // Obtener algunos registros de ejemplo
-    const [
-      usuariosEjemplo,
-      gestantesEjemplo,
-      medicosEjemplo,
-      ipsEjemplo,
-      alertasEjemplo
-    ] = await Promise.all([
-      prisma.usuarios.findMany({ take: 3, select: { id: true, nombre: true, email: true, rol: true } }),
-      prisma.gestantes.findMany({ 
-        take: 3, 
-        where: { activa: true },
-        select: { id: true, nombre: true, documento: true, riesgo_alto: true }
-      }),
-      prisma.medicos.findMany({ 
-        take: 3, 
-        where: { activo: true },
-        select: { id: true, nombre: true, especialidad: true }
-      }),
-      prisma.ips.findMany({ 
-        take: 3, 
-        where: { activo: true },
-        select: { id: true, nombre: true, municipio_id: true }
-      }),
-      prisma.alertas.findMany({ 
-        take: 3, 
-        where: { resuelta: false },
-        select: { id: true, tipo_alerta: true, nivel_prioridad: true, mensaje: true }
-      })
+      prisma.alertas.count({ where: { resuelta: false } })
     ]);
 
     const databaseStatus = {
-      resumen: {
-        totalUsuarios,
-        totalMunicipios,
-        totalIps,
-        totalMedicos,
-        totalGestantes,
-        totalAlertas,
-        totalControles,
-        totalContenidos
-      },
-      estadisticasActivas: {
-        gestantesActivas,
-        gestantesAltoRiesgo,
-        alertasActivas,
-        controlesRealizados,
-        medicosActivos,
-        ipsActivas
-      },
-      ejemplosRegistros: {
-        usuarios: usuariosEjemplo,
-        gestantes: gestantesEjemplo,
-        medicos: medicosEjemplo,
-        ips: ipsEjemplo,
-        alertas: alertasEjemplo
-      },
+      totalUsuarios,
+      totalMunicipios,
+      totalIps,
+      totalMedicos,
+      totalGestantes,
+      totalAlertas,
+      totalControles,
+      gestantesActivas,
+      controlesRealizados,
+      alertasActivas,
       timestamp: new Date().toISOString()
     };
 
-    console.log('📊 ESTADO COMPLETO DE LA BASE DE DATOS:');
-    console.log('='.repeat(50));
-    console.log('📈 RESUMEN GENERAL:');
-    console.log(`   - Total usuarios: ${totalUsuarios}`);
-    console.log(`   - Total municipios: ${totalMunicipios}`);
-    console.log(`   - Total IPS: ${totalIps}`);
-    console.log(`   - Total médicos: ${totalMedicos}`);
-    console.log(`   - Total gestantes: ${totalGestantes}`);
-    console.log(`   - Total alertas: ${totalAlertas}`);
-    console.log(`   - Total controles: ${totalControles}`);
-    console.log(`   - Total contenidos: ${totalContenidos}`);
-    console.log('');
-    console.log('📊 ESTADÍSTICAS ACTIVAS:');
-    console.log(`   - Gestantes activas: ${gestantesActivas}`);
-    console.log(`   - Gestantes alto riesgo: ${gestantesAltoRiesgo}`);
-    console.log(`   - Alertas activas: ${alertasActivas}`);
-    console.log(`   - Controles realizados: ${controlesRealizados}`);
-    console.log(`   - Médicos activos: ${medicosActivos}`);
-    console.log(`   - IPS activas: ${ipsActivas}`);
-    console.log('='.repeat(50));
+    console.log('📊 Estado de la BD obtenido:', databaseStatus);
 
     res.json({
       success: true,
       data: databaseStatus
     });
   } catch (error) {
-    console.error('❌ Error consultando estado de la base de datos:', error);
+    console.error('❌ Error obteniendo estado de la BD:', error);
     res.status(500).json({
       success: false,
-      error: 'Error consultando base de datos: ' + error.message
+      error: 'Error obteniendo estado de la base de datos: ' + error.message
     });
   }
 });
