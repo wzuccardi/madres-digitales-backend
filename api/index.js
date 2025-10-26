@@ -13,26 +13,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Manejar solicitudes OPTIONS (preflight) ANTES de cualquier otro middleware
-app.options('*', (req, res) => {
-  const origin = req.get('Origin');
-  console.log(`🔧 OPTIONS Request - Origin: ${origin}`);
-  
-  // Configurar headers CORS manualmente para OPTIONS
-  res.header('Access-Control-Allow-Origin', origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, X-HTTP-Method-Override, Access-Control-Request-Method, Access-Control-Request-Headers');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 horas
-  
-  // Responder inmediatamente con 200 para OPTIONS
-  res.status(200).send();
-});
-
-// CORS configuration mejorada
-const corsOptions = {
+// Configuración CORS para Vercel
+const corsMiddleware = cors({
   origin: function (origin, callback) {
-    // Lista de orígenes permitidos
+    // Permitir cualquier origen en producción para Vercel
     const allowedOrigins = [
       'http://localhost:3008',
       'http://localhost:3000',
@@ -82,13 +66,16 @@ const corsOptions = {
     'Access-Control-Request-Headers'
   ],
   exposedHeaders: ['Authorization', 'Content-Length', 'X-Total-Count'],
-  optionsSuccessStatus: 200, // Cambiado a 200 para Vercel
+  optionsSuccessStatus: 200,
   preflightContinue: false,
-  maxAge: 86400 // Cache preflight por 24 horas
-};
+  maxAge: 86400
+});
 
-// Aplicar CORS middleware para solicitudes no-OPTIONS
-app.use(cors(corsOptions));
+// Aplicar CORS middleware
+app.use(corsMiddleware);
+
+// Manejar explícitamente las solicitudes OPTIONS
+app.options('*', corsMiddleware);
 
 app.use(express.json());
 
@@ -115,6 +102,8 @@ app.get('/health', (req, res) => {
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   
+  console.log('🔐 Login request received:', { email, password: '***' });
+  
   if (!email || !password) {
     return res.status(400).json({
       success: false,
@@ -123,7 +112,7 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   // Demo login - accept any credentials and return super_admin role
-  res.json({
+  const response = {
     success: true,
     message: 'Login exitoso',
     data: {
@@ -136,7 +125,10 @@ app.post('/api/auth/login', (req, res) => {
       token: 'demo-token-' + Date.now(),
       refreshToken: 'refresh-token-' + Date.now()
     }
-  });
+  };
+  
+  console.log('✅ Login successful:', { email, response });
+  res.json(response);
 });
 
 app.put('/api/auth/profile', (req, res) => {
