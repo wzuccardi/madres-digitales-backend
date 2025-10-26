@@ -452,6 +452,50 @@ app.get('/api/database/status', async (req, res) => {
   }
 });
 
+// Alternative database status endpoint
+app.get('/api/db-status-alt', async (req, res) => {
+  try {
+    console.log('🔍 Obteniendo estado alternativo de la base de datos...');
+    
+    // Obtener datos básicos usando el patrón que funciona
+    const [
+      totalUsuarios,
+      totalGestantes,
+      totalControles,
+      gestantesActivas,
+      controlesRealizados
+    ] = await Promise.all([
+      prisma.usuarios.count(),
+      prisma.gestantes.count(),
+      prisma.control_prenatal.count(),
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.control_prenatal.count({ where: { realizado: true } })
+    ]);
+
+    const status = {
+      totalUsuarios,
+      totalGestantes,
+      totalControles,
+      gestantesActivas,
+      controlesRealizados,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('📊 Estado alternativo obtenido:', status);
+
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estado alternativo:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estado: ' + error.message
+    });
+  }
+});
+
 // Basic reports endpoint
 app.get('/api/reportes', (req, res) => {
   res.json({
