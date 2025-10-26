@@ -1,0 +1,17 @@
+{
+  "name": "madres-digitales-backend",
+  "version": "1.0.0",
+  "main": "api/index.js",
+  "scripts": {
+    "start": "node api/index.js",
+    "vercel-build": "echo 'Build completed'",
+    "postinstall": "echo 'Installation completed'"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
