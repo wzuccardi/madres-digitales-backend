@@ -42,7 +42,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Basic auth endpoint
+// Auth endpoints
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
   
@@ -53,7 +53,7 @@ app.post('/api/auth/login', (req, res) => {
     });
   }
 
-  // Demo login - accept any credentials
+  // Demo login - accept any credentials and return super_admin role
   res.json({
     success: true,
     message: 'Login exitoso',
@@ -62,9 +62,169 @@ app.post('/api/auth/login', (req, res) => {
         id: 'demo-user',
         nombre: 'Usuario Demo',
         email: email,
-        rol: 'admin'
+        rol: 'super_admin'
       },
-      token: 'demo-token-' + Date.now()
+      token: 'demo-token-' + Date.now(),
+      refreshToken: 'refresh-token-' + Date.now()
+    }
+  });
+});
+
+app.put('/api/auth/profile', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Perfil actualizado exitosamente',
+    data: {
+      usuario: {
+        id: 'demo-user',
+        nombre: 'Usuario Demo',
+        email: 'demo@example.com',
+        rol: 'super_admin'
+      }
+    }
+  });
+});
+
+// Dashboard endpoints
+app.get('/api/dashboard/estadisticas', (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      totalGestantes: 125,
+      controlesRealizados: 89,
+      alertasActivas: 12,
+      totalMedicos: 15,
+      totalIps: 8,
+      gestantesAltoRiesgo: 23,
+      controlesHoy: 5,
+      proximosCitas: 18
+    }
+  });
+});
+
+// IPS endpoints
+app.get('/api/ips', (req, res) => {
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 1,
+        nombre: 'IPS Cartagena Centro',
+        direccion: 'Calle 30 #15-25',
+        telefono: '300-123-4567',
+        email: 'cartagena@ips.com',
+        municipio: 'Cartagena',
+        estado: 'activo'
+      },
+      {
+        id: 2,
+        nombre: 'IPS Magangué',
+        direccion: 'Carrera 10 #8-15',
+        telefono: '300-987-6543',
+        email: 'magangue@ips.com',
+        municipio: 'Magangué',
+        estado: 'activo'
+      }
+    ]
+  });
+});
+
+// Gestantes endpoints
+app.get('/api/gestantes', (req, res) => {
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 1,
+        nombre: 'María González',
+        documento: '12345678',
+        edad: 28,
+        semanas: 24,
+        riesgo: 'bajo',
+        ips: 'IPS Cartagena Centro',
+        ultimoControl: '2025-10-20',
+        proximaCita: '2025-11-15'
+      },
+      {
+        id: 2,
+        nombre: 'Ana Rodríguez',
+        documento: '87654321',
+        edad: 32,
+        semanas: 18,
+        riesgo: 'alto',
+        ips: 'IPS Magangué',
+        ultimoControl: '2025-10-18',
+        proximaCita: '2025-11-10'
+      }
+    ]
+  });
+});
+
+// Médicos endpoints
+app.get('/api/medicos', (req, res) => {
+  res.json({
+    success: true,
+    data: [
+      {
+        id: 1,
+        nombre: 'Dr. Carlos Pérez',
+        especialidad: 'Ginecología',
+        documento: '98765432',
+        telefono: '300-555-1234',
+        email: 'carlos.perez@medico.com',
+        ips: 'IPS Cartagena Centro',
+        estado: 'activo'
+      },
+      {
+        id: 2,
+        nombre: 'Dra. Laura Martínez',
+        especialidad: 'Obstetricia',
+        documento: '11223344',
+        telefono: '300-555-5678',
+        email: 'laura.martinez@medico.com',
+        ips: 'IPS Magangué',
+        estado: 'activo'
+      }
+    ]
+  });
+});
+
+// Alertas endpoints
+app.get('/api/alertas-automaticas/alertas', (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  
+  res.json({
+    success: true,
+    data: {
+      alertas: [
+        {
+          id: 1,
+          tipo: 'cita_vencida',
+          titulo: 'Cita médica vencida',
+          descripcion: 'María González tiene una cita vencida desde hace 3 días',
+          gestante: 'María González',
+          fecha: '2025-10-22',
+          prioridad: 'alta',
+          estado: 'pendiente'
+        },
+        {
+          id: 2,
+          tipo: 'alto_riesgo',
+          titulo: 'Gestante de alto riesgo',
+          descripcion: 'Ana Rodríguez requiere seguimiento especial',
+          gestante: 'Ana Rodríguez',
+          fecha: '2025-10-25',
+          prioridad: 'crítica',
+          estado: 'activa'
+        }
+      ],
+      pagination: {
+        page: page,
+        limit: limit,
+        total: 2,
+        totalPages: 1
+      }
     }
   });
 });
