@@ -9,11 +9,38 @@ const app = express();
 
 // CORS configuration
 app.use(cors({
-  origin: [
-    'http://localhost:3008',
-    'https://madres-digitales-frontend.vercel.app',
-    'https://madres-digitales.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Lista de orígenes permitidos
+    const allowedOrigins = [
+      'http://localhost:3008',
+      'http://localhost:3000',
+      'https://madres-digitales-frontend.vercel.app',
+      'https://madres-digitales.vercel.app',
+      'https://madresdigitales.netlify.app'
+    ];
+    
+    // Patrones regex para dominios dinámicos
+    const productionPatterns = [
+      /\.vercel\.app$/,
+      /\.vercel\.dev$/,
+      /^https:\/\/madres-digitales.*\.vercel\.app$/,
+      /^https:\/\/.*\.madres-digitales\.com$/
+    ];
+    
+    // Permitir requests sin origin (herramientas como Postman)
+    if (!origin) return callback(null, true);
+    
+    // Verificar si el origen está en la lista permitida o coincide con algún patrón
+    const isAllowed = allowedOrigins.includes(origin) ||
+      productionPatterns.some(pattern => pattern.test(origin));
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.log('🚨 CORS: Origen no permitido:', origin);
+      callback(new Error('No permitido por CORS'), false);
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
@@ -21,9 +48,17 @@ app.use(cors({
     'X-Requested-With',
     'Content-Type',
     'Accept',
-    'Authorization'
-  ]
+    'Authorization',
+    'Cache-Control',
+    'X-HTTP-Method-Override'
+  ],
+  exposedHeaders: ['Authorization'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 }));
+
+// Manejar preflight requests explícitamente
+app.options('*', cors());
 
 app.use(express.json());
 

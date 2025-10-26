@@ -50,6 +50,7 @@ app.use(cors({
       'http://localhost:3009',  // Dashboard monitoreo
       'http://localhost:52638',  // Puerto dinámico para hot reload
       'https://madresdigitales.netlify.app',  // Dominio de producción Netlify
+      'https://madres-digitales-frontend.vercel.app',  // Frontend producción Vercel
     ];
     
     // Agregar dominios de producción desde variables de entorno
