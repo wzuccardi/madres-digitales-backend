@@ -25,6 +25,13 @@ import websocketRoutes from './websocket.routes';
 
 const router = Router();
 
+// 🔍 DEBUG: Log de todas las rutas registradas
+router.use((req, res, next) => {
+  console.log('🔍 DEBUG: Ruta solicitada:', req.method, req.path);
+  console.log('🔍 DEBUG: Headers:', Object.keys(req.headers));
+  next();
+});
+
 // Rutas de autenticación
 router.use('/auth', authRoutes);
 
@@ -35,7 +42,10 @@ router.use('/dashboard', dashboardRoutes);
 router.use('/gestantes', gestantesRoutes);
 
 // Rutas de controles prenatales (ambas variantes)
-router.use('/controles', controlesRoutes);
+router.use('/controles', (req, res, next) => {
+  console.log('🔍 DEBUG: Entrando a ruta /controles');
+  next();
+}, controlesRoutes);
 router.use('/controles-prenatales', controlesRoutes);
 
 // Rutas de alertas
@@ -91,7 +101,11 @@ router.use('/mensajes', mensajesRoutes);
 router.use('/geolocalizacion', geolocalizacionRoutes);
 
 // Rutas CRUD de contenido educativo (con upload de videos)
-router.use('/contenido-crud', contenidoCrudRoutes);
+router.use('/contenido-crud', (req, res, next) => {
+  console.log('🔍 DEBUG: Entrando a ruta /contenido-crud');
+  console.log('🔍 DEBUG: Query params:', req.query);
+  next();
+}, contenidoCrudRoutes);
 
 // Rutas de WebSocket para notificaciones en tiempo real
 router.use('/websocket', websocketRoutes);
