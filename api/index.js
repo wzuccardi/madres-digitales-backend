@@ -163,7 +163,10 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 });
 
+console.log('🔍 DEBUG: Endpoint /api/dashboard/estadisticas registrado correctamente');
+
 // TEST ENDPOINT - Simple test right after working endpoint
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/test-simple');
 app.get('/api/test-simple', (req, res) => {
   res.json({
     success: true,
@@ -171,8 +174,10 @@ app.get('/api/test-simple', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+console.log('🔍 DEBUG: Endpoint /api/test-simple registrado correctamente');
 
 // IPS endpoints - DATOS REALES
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/ips');
 app.get('/api/ips', async (req, res) => {
   try {
     console.log('🏥 Obteniendo IPS reales de la base de datos...');
@@ -223,8 +228,21 @@ app.get('/api/ips', async (req, res) => {
     });
   }
 });
+console.log('🔍 DEBUG: Endpoint /api/ips registrado correctamente');
+
+// TEST: Database status moved to working location
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/database/status-working');
+app.get('/api/database/status-working', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Database status endpoint moved to working location',
+    timestamp: new Date().toISOString()
+  });
+});
+console.log('🔍 DEBUG: Endpoint /api/database/status-working registrado correctamente');
 
 // Gestantes endpoints - DATOS REALES
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/gestantes');
 app.get('/api/gestantes', async (req, res) => {
   try {
     console.log('🤰 Obteniendo gestantes reales de la base de datos...');
@@ -292,8 +310,10 @@ app.get('/api/gestantes', async (req, res) => {
     });
   }
 });
+console.log('🔍 DEBUG: Endpoint /api/gestantes registrado correctamente');
 
 // Médicos endpoints - DATOS REALES
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/medicos');
 app.get('/api/medicos', async (req, res) => {
   try {
     console.log('👨‍⚕️ Obteniendo médicos reales de la base de datos...');
@@ -338,8 +358,10 @@ app.get('/api/medicos', async (req, res) => {
     });
   }
 });
+console.log('🔍 DEBUG: Endpoint /api/medicos registrado correctamente');
 
 // Alertas endpoints - DATOS REALES
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/alertas-automaticas/alertas');
 app.get('/api/alertas-automaticas/alertas', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -401,8 +423,10 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
     });
   }
 });
+console.log('🔍 DEBUG: Endpoint /api/alertas-automaticas/alertas registrado correctamente');
 
 // TEST: Simple endpoint in the exact same place
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/database/status');
 app.get('/api/database/status', (req, res) => {
   res.json({
     success: true,
@@ -410,8 +434,10 @@ app.get('/api/database/status', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+console.log('🔍 DEBUG: Endpoint /api/database/status registrado correctamente');
 
 // Alternative database status endpoint
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/db-status-alt');
 app.get('/api/db-status-alt', async (req, res) => {
   try {
     console.log('🔍 Obteniendo estado alternativo de la base de datos...');
@@ -454,8 +480,10 @@ app.get('/api/db-status-alt', async (req, res) => {
     });
   }
 });
+console.log('🔍 DEBUG: Endpoint /api/db-status-alt registrado correctamente');
 
 // Basic reports endpoint
+console.log('🔍 DEBUG: Intentando registrar endpoint /api/reportes');
 app.get('/api/reportes', (req, res) => {
   res.json({
     success: true,
@@ -532,6 +560,8 @@ process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+
+console.log('🔍 DEBUG: Todos los endpoints registrados correctamente - Archivo completado');
 
 // Export for Vercel
 module.exports = app;
