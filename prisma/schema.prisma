@@ -195,7 +195,7 @@ model controles {
 
   // Relaciones
   gestante                gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
-  medico                  medicos?  @relation(fields: [medico_id], references: [id])
+  medico                  medicos?  @relation(fields: [medico_id], references: [id], onDelete: SetNull)
 
   @@map("controles")
 }

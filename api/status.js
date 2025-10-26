@@ -27,8 +27,9 @@ module.exports = async (req, res) => {
       });
     }
 
-    console.log('🔍 Obteniendo estado de la base de datos...');
+    console.log('🔍 Obteniendo estado completo de la base de datos...');
     
+    // Usar la misma estructura que el endpoint que funciona (dashboard/estadisticas)
     const [
       totalUsuarios,
       totalMunicipios,
@@ -67,11 +68,12 @@ module.exports = async (req, res) => {
       timestamp: new Date().toISOString()
     };
 
-    console.log('📊 Estado de la BD obtenido:', databaseStatus);
+    console.log('📊 Estado completo de la BD obtenido:', databaseStatus);
 
     res.json({
       success: true,
-      data: databaseStatus
+      data: databaseStatus,
+      message: 'Database status retrieved successfully'
     });
 
   } catch (error) {
