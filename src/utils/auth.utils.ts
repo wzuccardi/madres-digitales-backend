@@ -40,7 +40,7 @@ export async function getUserFromToken(req: Request): Promise<{ id: string; rol:
     const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
     
     // Obtener información actualizada del usuario desde la base de datos
-    const user = await prisma.usuario.findUnique({
+    const user = await prisma.usuarios.findUnique({
       where: { id: decoded.id },
       select: {
         id: true,
@@ -113,7 +113,7 @@ export async function optionalAuth(req: AuthenticatedRequest, res: any, next: an
     
     if (userInfo) {
       // Obtener información completa del usuario
-      const user = await prisma.usuario.findUnique({
+      const user = await prisma.usuarios.findUnique({
         where: { id: userInfo.id },
         select: {
           id: true,
@@ -147,7 +147,7 @@ export async function requireAuth(req: AuthenticatedRequest, res: any, next: any
     }
 
     // Obtener información completa del usuario
-    const user = await prisma.usuario.findUnique({
+    const user = await prisma.usuarios.findUnique({
       where: { id: userInfo.id },
       select: {
         id: true,
