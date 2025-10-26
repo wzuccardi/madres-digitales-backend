@@ -7,8 +7,14 @@ const prisma = new PrismaClient();
 
 const app = express();
 
-// CORS configuration
-app.use(cors({
+// Middleware para logging de solicitudes
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
+  next();
+});
+
+// CORS configuration mejorada
+const corsOptions = {
   origin: function (origin, callback) {
     // Lista de orígenes permitidos
     const allowedOrigins = [
@@ -24,17 +30,22 @@ app.use(cors({
       /\.vercel\.app$/,
       /\.vercel\.dev$/,
       /^https:\/\/madres-digitales.*\.vercel\.app$/,
-      /^https:\/\/.*\.madres-digitales\.com$/
+      /^https:\/\/.*\.madres-digitales\.com$/,
+      /^https:\/\/madresdigitales.*\.netlify\.app$/
     ];
     
-    // Permitir requests sin origin (herramientas como Postman)
-    if (!origin) return callback(null, true);
+    // Permitir requests sin origin (herramientas como Postman, apps móviles)
+    if (!origin) {
+      console.log('✅ CORS: Permitiendo solicitud sin origin');
+      return callback(null, true);
+    }
     
     // Verificar si el origen está en la lista permitida o coincide con algún patrón
     const isAllowed = allowedOrigins.includes(origin) ||
       productionPatterns.some(pattern => pattern.test(origin));
     
     if (isAllowed) {
+      console.log(`✅ CORS: Origen permitido: ${origin}`);
       callback(null, true);
     } else {
       console.log('🚨 CORS: Origen no permitido:', origin);
@@ -50,15 +61,21 @@ app.use(cors({
     'Accept',
     'Authorization',
     'Cache-Control',
-    'X-HTTP-Method-Override'
+    'X-HTTP-Method-Override',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
   ],
-  exposedHeaders: ['Authorization'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false
-}));
+  exposedHeaders: ['Authorization', 'Content-Length', 'X-Total-Count'],
+  optionsSuccessStatus: 204, // Cambiado a 204 que es el estándar para OPTIONS
+  preflightContinue: false,
+  maxAge: 86400 // Cache preflight por 24 horas
+};
 
-// Manejar preflight requests explícitamente
-app.options('*', cors());
+// Aplicar CORS middleware
+app.use(cors(corsOptions));
+
+// Manejar preflight requests explícitamente con la misma configuración
+app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
