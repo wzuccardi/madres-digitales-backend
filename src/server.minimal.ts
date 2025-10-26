@@ -270,10 +270,14 @@ app.use('*', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor mínimo corriendo en puerto ${PORT}`);
-  console.log(`📱 Acceso: http://localhost:${PORT}`);
-  console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
-});
+// Solo iniciar el servidor si no estamos en Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor mínimo corriendo en puerto ${PORT}`);
+    console.log(`📱 Acceso: http://localhost:${PORT}`);
+    console.log(`🌍 Entorno: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
 
-export default app;
+// Exportar la app para Vercel
+module.exports = app;
