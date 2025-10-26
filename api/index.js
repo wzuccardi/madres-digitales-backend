@@ -420,12 +420,12 @@ app.get('/api/database/status', async (req, res) => {
       prisma.medicos.count(),
       prisma.gestantes.count(),
       prisma.alertas.count(),
-      prisma.controles.count(),
+      prisma.control_prenatal.count(),
       prisma.contenidos.count(),
       prisma.gestantes.count({ where: { activa: true } }),
       prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
       prisma.alertas.count({ where: { resuelta: false } }),
-      prisma.controles.count({ where: { realizado: true } }),
+      prisma.control_prenatal.count({ where: { realizado: true } }),
       prisma.medicos.count({ where: { activo: true } }),
       prisma.ips.count({ where: { activo: true } })
     ]);
