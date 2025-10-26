@@ -2,14 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 
-// Inicializar Prisma Client con lazy loading
-let prisma;
-try {
-  prisma = new PrismaClient();
-  console.log('✅ Prisma Client inicializado correctamente');
-} catch (error) {
-  console.error('❌ Error inicializando Prisma Client:', error);
-}
+// Inicializar Prisma Client
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -32,17 +26,6 @@ app.use(cors({
 }));
 
 app.use(express.json());
-
-// TEST ENDPOINT BEFORE DASHBOARD - Para probar si el dashboard está causando el bloqueo
-console.log('🔍 DEBUG: Registrando endpoint /api/test-before-dashboard');
-app.get('/api/test-before-dashboard', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Test endpoint BEFORE dashboard - working',
-    timestamp: new Date().toISOString()
-  });
-});
-console.log('🔍 DEBUG: Endpoint /api/test-before-dashboard registrado');
 
 // Health check
 app.get('/', (req, res) => {
@@ -87,8 +70,7 @@ app.post('/api/auth/login', (req, res) => {
         email: email,
         rol: 'super_admin'
       },
-      token: 'demo-token-' + Date.now(),
-      refreshToken: 'refresh-token-' + Date.now()
+      token: 'demo-jwt-token'
     }
   };
   
@@ -180,21 +162,7 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 });
 
-console.log('🔍 DEBUG: Endpoint /api/dashboard/estadisticas registrado correctamente');
-
-// TEST ENDPOINT - Simple test right after working endpoint
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/test-simple');
-app.get('/api/test-simple', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Test endpoint working',
-    timestamp: new Date().toISOString()
-  });
-});
-console.log('🔍 DEBUG: Endpoint /api/test-simple registrado correctamente');
-
 // IPS endpoints - DATOS REALES
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/ips');
 app.get('/api/ips', async (req, res) => {
   try {
     console.log('🏥 Obteniendo IPS reales de la base de datos...');
@@ -209,8 +177,7 @@ app.get('/api/ips', async (req, res) => {
         gestantes: {
           where: { activa: true }
         }
-      },
-      orderBy: { fecha_creacion: 'desc' }
+      }
     });
 
     const ipsFormateadas = ips.map(ipsItem => ({
@@ -220,9 +187,8 @@ app.get('/api/ips', async (req, res) => {
       direccion: ipsItem.direccion,
       telefono: ipsItem.telefono,
       email: ipsItem.email,
-      municipio: ipsItem.municipios?.nombre || 'Sin municipio',
       nivel: ipsItem.nivel,
-      estado: ipsItem.activo ? 'activo' : 'inactivo',
+      municipio: ipsItem.municipios?.nombre || null,
       medicosAsignados: ipsItem.medicos.length,
       gestantesAsignadas: ipsItem.gestantes.length,
       coordenadas: {
@@ -245,21 +211,8 @@ app.get('/api/ips', async (req, res) => {
     });
   }
 });
-console.log('🔍 DEBUG: Endpoint /api/ips registrado correctamente');
-
-// TEST: Database status moved to working location
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/database/status-working');
-app.get('/api/database/status-working', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Database status endpoint moved to working location',
-    timestamp: new Date().toISOString()
-  });
-});
-console.log('🔍 DEBUG: Endpoint /api/database/status-working registrado correctamente');
 
 // Gestantes endpoints - DATOS REALES
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/gestantes');
 app.get('/api/gestantes', async (req, res) => {
   try {
     console.log('🤰 Obteniendo gestantes reales de la base de datos...');
@@ -270,12 +223,11 @@ app.get('/api/gestantes', async (req, res) => {
         ips_asignada: true,
         municipios: true,
         medico_tratante: true,
-        controles: {
+        control_prenatal: {
           orderBy: { fecha_control: 'desc' },
           take: 1
         }
-      },
-      orderBy: { fecha_creacion: 'desc' }
+      }
     });
 
     const gestantesFormateadas = gestantes.map(gestante => {
@@ -292,8 +244,8 @@ app.get('/api/gestantes', async (req, res) => {
       }
 
       // Último control
-      const ultimoControl = gestante.controles.length > 0 
-        ? gestante.controles[0].fecha_control.toISOString().split('T')[0]
+      const ultimoControl = gestante.control_prenatal.length > 0 
+        ? gestante.control_prenatal[0].fecha_control.toISOString().split('T')[0]
         : null;
 
       return {
@@ -302,14 +254,16 @@ app.get('/api/gestantes', async (req, res) => {
         documento: gestante.documento,
         edad,
         semanas,
-        riesgo: gestante.riesgo_alto ? 'alto' : 'bajo',
-        ips: gestante.ips_asignada?.nombre || 'Sin IPS asignada',
-        municipio: gestante.municipios?.nombre || 'Sin municipio',
-        ultimoControl,
-        proximaCita: null, // Se puede calcular desde controles programados
         telefono: gestante.telefono,
+        direccion: gestante.direccion,
         eps: gestante.eps,
-        medico: gestante.medico_tratante?.nombre || 'Sin médico asignado'
+        regimenSalud: gestante.regimen_salud,
+        riesgoAlto: gestante.riesgo_alto,
+        municipio: gestante.municipios?.nombre || null,
+        ipsAsignada: gestante.ips_asignada?.nombre || null,
+        medicoTratante: gestante.medico_tratante?.nombre || null,
+        ultimoControl,
+        fechaCreacion: gestante.fecha_creacion.toISOString().split('T')[0]
       };
     });
 
@@ -327,10 +281,8 @@ app.get('/api/gestantes', async (req, res) => {
     });
   }
 });
-console.log('🔍 DEBUG: Endpoint /api/gestantes registrado correctamente');
 
 // Médicos endpoints - DATOS REALES
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/medicos');
 app.get('/api/medicos', async (req, res) => {
   try {
     console.log('👨‍⚕️ Obteniendo médicos reales de la base de datos...');
@@ -343,22 +295,21 @@ app.get('/api/medicos', async (req, res) => {
         gestantes: {
           where: { activa: true }
         }
-      },
-      orderBy: { fecha_creacion: 'desc' }
+      }
     });
 
     const medicosFormateados = medicos.map(medico => ({
       id: medico.id,
       nombre: medico.nombre,
-      especialidad: medico.especialidad || 'No especificada',
       documento: medico.documento,
       telefono: medico.telefono,
+      especialidad: medico.especialidad,
       email: medico.email,
-      ips: medico.ips?.nombre || 'Sin IPS asignada',
-      municipio: medico.municipios?.nombre || 'Sin municipio',
       registroMedico: medico.registro_medico,
-      estado: medico.activo ? 'activo' : 'inactivo',
-      gestantesAsignadas: medico.gestantes.length
+      ips: medico.ips?.nombre || null,
+      municipio: medico.municipios?.nombre || null,
+      gestantesAsignadas: medico.gestantes.length,
+      fechaCreacion: medico.fecha_creacion.toISOString().split('T')[0]
     }));
 
     console.log(`👨‍⚕️ Encontrados ${medicosFormateados.length} médicos activos`);
@@ -375,28 +326,30 @@ app.get('/api/medicos', async (req, res) => {
     });
   }
 });
-console.log('🔍 DEBUG: Endpoint /api/medicos registrado correctamente');
 
 // Alertas endpoints - DATOS REALES
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/alertas-automaticas/alertas');
 app.get('/api/alertas-automaticas/alertas', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
-    const offset = (page - 1) * limit;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
     console.log('🚨 Obteniendo alertas reales de la base de datos...');
     
     const [alertas, totalAlertas] = await Promise.all([
       prisma.alertas.findMany({
+        skip,
+        take: limit,
         where: { resuelta: false },
         include: {
-          gestante: true,
-          madrina: true
+          gestante: {
+            select: { nombre: true, documento: true }
+          },
+          madrina: {
+            select: { nombre: true, telefono: true }
+          }
         },
-        orderBy: { fecha_creacion: 'desc' },
-        skip: offset,
-        take: limit
+        orderBy: { fecha_creacion: 'desc' }
       }),
       prisma.alertas.count({ where: { resuelta: false } })
     ]);
@@ -404,19 +357,19 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
     const alertasFormateadas = alertas.map(alerta => ({
       id: alerta.id,
       tipo: alerta.tipo_alerta,
-      titulo: `Alerta ${alerta.tipo_alerta}`,
-      descripcion: alerta.mensaje,
-      gestante: alerta.gestante.nombre,
-      gestanteId: alerta.gestante.id,
-      fecha: alerta.fecha_creacion.toISOString().split('T')[0],
       prioridad: alerta.nivel_prioridad,
-      estado: alerta.estado || 'pendiente',
-      madrina: alerta.madrina?.nombre || 'Sin asignar',
-      esAutomatica: alerta.es_automatica,
-      scoreRiesgo: alerta.score_riesgo
+      mensaje: alerta.mensaje,
+      gestante: {
+        nombre: alerta.gestante.nombre,
+        documento: alerta.gestante.documento
+      },
+      madrina: alerta.madrina ? {
+        nombre: alerta.madrina.nombre,
+        telefono: alerta.madrina.telefono
+      } : null,
+      fechaCreacion: alerta.fecha_creacion.toISOString(),
+      resuelta: alerta.resuelta
     }));
-
-    const totalPages = Math.ceil(totalAlertas / limit);
 
     console.log(`🚨 Encontradas ${alertasFormateadas.length} alertas activas de ${totalAlertas} total`);
 
@@ -428,7 +381,7 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
           page,
           limit,
           total: totalAlertas,
-          totalPages
+          totalPages: Math.ceil(totalAlertas / limit)
         }
       }
     });
@@ -440,67 +393,66 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
     });
   }
 });
-console.log('🔍 DEBUG: Endpoint /api/alertas-automaticas/alertas registrado correctamente');
 
-// TEST: Simple endpoint in the exact same place
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/database/status');
-app.get('/api/database/status', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Simple test in database/status location',
-    timestamp: new Date().toISOString()
-  });
-});
-console.log('🔍 DEBUG: Endpoint /api/database/status registrado correctamente');
-
-// Alternative database status endpoint
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/db-status-alt');
-app.get('/api/db-status-alt', async (req, res) => {
+// Database status endpoint
+app.get('/api/database/status', async (req, res) => {
   try {
-    console.log('🔍 Obteniendo estado alternativo de la base de datos...');
+    console.log('🔍 Obteniendo estado de la base de datos...');
     
-    // Obtener datos básicos usando el patrón que funciona
     const [
       totalUsuarios,
+      totalMunicipios,
+      totalIps,
+      totalMedicos,
       totalGestantes,
-      totalControles,
-      gestantesActivas,
-      controlesRealizados
-    ] = await Promise.all([
-      prisma.usuarios.count(),
-      prisma.gestantes.count(),
-      prisma.control_prenatal.count(),
-      prisma.gestantes.count({ where: { activa: true } }),
-      prisma.control_prenatal.count({ where: { realizado: true } })
-    ]);
-
-    const status = {
-      totalUsuarios,
-      totalGestantes,
+      totalAlertas,
       totalControles,
       gestantesActivas,
       controlesRealizados,
+      alertasActivas
+    ] = await Promise.all([
+      prisma.usuarios.count(),
+      prisma.municipios.count(),
+      prisma.ips.count(),
+      prisma.medicos.count(),
+      prisma.gestantes.count(),
+      prisma.alertas.count(),
+      prisma.control_prenatal.count(),
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.control_prenatal.count({ where: { realizado: true } }),
+      prisma.alertas.count({ where: { resuelta: false } })
+    ]);
+
+    const databaseStatus = {
+      totalUsuarios,
+      totalMunicipios,
+      totalIps,
+      totalMedicos,
+      totalGestantes,
+      totalAlertas,
+      totalControles,
+      gestantesActivas,
+      controlesRealizados,
+      alertasActivas,
       timestamp: new Date().toISOString()
     };
 
-    console.log('📊 Estado alternativo obtenido:', status);
+    console.log('📊 Estado de la BD obtenido:', databaseStatus);
 
     res.json({
       success: true,
-      data: status
+      data: databaseStatus
     });
   } catch (error) {
-    console.error('❌ Error obteniendo estado alternativo:', error);
+    console.error('❌ Error obteniendo estado de la BD:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo estado: ' + error.message
+      error: 'Error obteniendo estado de la base de datos: ' + error.message
     });
   }
 });
-console.log('🔍 DEBUG: Endpoint /api/db-status-alt registrado correctamente');
 
 // Basic reports endpoint
-console.log('🔍 DEBUG: Intentando registrar endpoint /api/reportes');
 app.get('/api/reportes', (req, res) => {
   res.json({
     success: true,
@@ -529,17 +481,9 @@ app.get('/api/reportes/descargar/estadisticas-gestantes', (req, res) => {
     message: 'Estadísticas de gestantes obtenidas exitosamente',
     data: {
       id: 'estadisticas-gestantes',
-      tipo: 'estadisticas-gestantes',
-      titulo: 'Estadísticas de Gestantes por Municipio',
-      descripcion: 'Estadísticas detalladas de gestantes agrupadas por municipio',
-      datos: {
-        totalGestantes: 1,
-        gestantesAltoRiesgo: 0,
-        gestantesPorMunicipio: [
-          { municipio: 'Turbaco', total: 1, altoRiesgo: 0 }
-        ]
-      },
-      fechaGeneracion: new Date().toISOString()
+      titulo: 'Estadísticas de Gestantes',
+      fechaGeneracion: new Date().toISOString(),
+      datos: []
     }
   });
 });
@@ -553,32 +497,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler - TEMPORARILY COMMENTED OUT FOR DEBUGGING
-// app.use('*', (req, res) => {
-//   console.log('❌ 404 - Ruta no encontrada:', req.originalUrl);
-//   res.status(404).json({
-//     success: false,
-//     error: 'Ruta no encontrada',
-//     path: req.originalUrl
-//   });
-// });
-
 // Graceful shutdown
 process.on('beforeExit', async () => {
   await prisma.$disconnect();
 });
-
-process.on('SIGINT', async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  await prisma.$disconnect();
-  process.exit(0);
-});
-
-console.log('🔍 DEBUG: Todos los endpoints registrados correctamente - Archivo completado');
 
 // Export for Vercel
 module.exports = app;
