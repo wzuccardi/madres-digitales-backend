@@ -92,179 +92,139 @@ app.put('/api/auth/profile', (req, res) => {
 });
 
 // Dashboard endpoints - DATOS BASADOS EN LA BASE DE DATOS REAL
-app.get('/api/dashboard/estadisticas', async (req, res) => {
-  try {
-    console.log('📊 Obteniendo estadísticas del dashboard...');
-    
-    // Datos basados en el dump de la base de datos real:
-    // - 1 gestante activa (Kathiuska)
-    // - 1 IPS activa (MataSano)
-    // - 0 médicos
-    // - 0 alertas
-    // - 0 controles
-    const estadisticas = {
-      totalGestantes: 1,        // 1 gestante real: Kathiuska
-      controlesRealizados: 0,   // 0 controles en la BD
-      alertasActivas: 0,        // 0 alertas en la BD
-      totalMedicos: 0,          // 0 médicos en la BD
-      totalIps: 1,              // 1 IPS real: MataSano
-      gestantesAltoRiesgo: 0,   // Kathiuska no es alto riesgo
-      controlesHoy: 0,          // 0 controles hoy
-      proximosCitas: 0          // 0 citas programadas
-    };
+app.get('/api/dashboard/estadisticas', (req, res) => {
+  console.log('📊 Obteniendo estadísticas del dashboard...');
+  
+  // Datos basados en el dump de la base de datos real:
+  // - 1 gestante activa (Kathiuska)
+  // - 1 IPS activa (MataSano)
+  // - 0 médicos
+  // - 0 alertas
+  // - 0 controles
+  const estadisticas = {
+    totalGestantes: 1,        // 1 gestante real: Kathiuska
+    controlesRealizados: 0,   // 0 controles en la BD
+    alertasActivas: 0,        // 0 alertas en la BD
+    totalMedicos: 0,          // 0 médicos en la BD
+    totalIps: 1,              // 1 IPS real: MataSano
+    gestantesAltoRiesgo: 0,   // Kathiuska no es alto riesgo
+    controlesHoy: 0,          // 0 controles hoy
+    proximosCitas: 0          // 0 citas programadas
+  };
 
-    console.log('📊 Estadísticas devueltas (datos reales):', estadisticas);
+  console.log('📊 Estadísticas devueltas (datos reales):', estadisticas);
 
-    res.json({
-      success: true,
-      data: estadisticas
-    });
-  } catch (error) {
-    console.error('❌ Error obteniendo estadísticas:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error obteniendo estadísticas: ' + error.message
-    });
-  }
+  res.json({
+    success: true,
+    data: estadisticas
+  });
 });
 
 // IPS endpoints - DATOS REALES
-app.get('/api/ips', async (req, res) => {
-  try {
-    console.log('🏥 Obteniendo IPS...');
-    
-    // Datos reales de la base de datos
-    const ips = [
-      {
-        id: 'cmh1injy2000181kjhefzdneb',
-        nombre: 'MataSano',
-        nit: '789654123',
-        direccion: 'las piedras',
-        telefono: '65478912',
-        email: 'matasano@gmail.com',
-        municipio: 'ARJONA', // municipio_id: 13052
-        nivel: 'primario',
-        estado: 'activo',
-        medicosAsignados: 0,
-        gestantesAsignadas: 1, // Kathiuska podría estar asignada aquí
-        coordenadas: {
-          latitud: 10.44542070,
-          longitud: -75.51764312
-        }
+app.get('/api/ips', (req, res) => {
+  console.log('🏥 Obteniendo IPS...');
+  
+  // Datos reales de la base de datos
+  const ips = [
+    {
+      id: 'cmh1injy2000181kjhefzdneb',
+      nombre: 'MataSano',
+      nit: '789654123',
+      direccion: 'las piedras',
+      telefono: '65478912',
+      email: 'matasano@gmail.com',
+      municipio: 'ARJONA', // municipio_id: 13052
+      nivel: 'primario',
+      estado: 'activo',
+      medicosAsignados: 0,
+      gestantesAsignadas: 1, // Kathiuska podría estar asignada aquí
+      coordenadas: {
+        latitud: 10.44542070,
+        longitud: -75.51764312
       }
-    ];
+    }
+  ];
 
-    console.log(`🏥 Devueltas ${ips.length} IPS reales`);
+  console.log(`🏥 Devueltas ${ips.length} IPS reales`);
 
-    res.json({
-      success: true,
-      data: ips
-    });
-  } catch (error) {
-    console.error('❌ Error obteniendo IPS:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error obteniendo IPS: ' + error.message
-    });
-  }
+  res.json({
+    success: true,
+    data: ips
+  });
 });
 
 // Gestantes endpoints - DATOS REALES
-app.get('/api/gestantes', async (req, res) => {
-  try {
-    console.log('🤰 Obteniendo gestantes...');
-    
-    // Datos reales de la base de datos
-    const gestantes = [
-      {
-        id: 'cmh1dudh10001ort4r7212qu4',
-        nombre: 'Kathiuska',
-        documento: '459874562',
-        edad: 24, // Nacida en 2000-10-27, calculado aproximadamente
-        semanas: 14, // Calculado desde fecha_ultima_menstruacion: 2025-09-21
-        riesgo: 'bajo', // riesgo_alto: false
-        ips: 'MataSano', // Podría estar asignada a la IPS
-        municipio: 'Turbaco', // Dirección: Turbaco ccl del Coco
-        ultimoControl: null, // No hay controles registrados
-        proximaCita: null,
-        telefono: '3005689745',
-        eps: 'Sanitas',
-        medico: 'Sin médico asignado' // No hay médicos en la BD
-      }
-    ];
+app.get('/api/gestantes', (req, res) => {
+  console.log('🤰 Obteniendo gestantes...');
+  
+  // Datos reales de la base de datos
+  const gestantes = [
+    {
+      id: 'cmh1dudh10001ort4r7212qu4',
+      nombre: 'Kathiuska',
+      documento: '459874562',
+      edad: 24, // Nacida en 2000-10-27, calculado aproximadamente
+      semanas: 14, // Calculado desde fecha_ultima_menstruacion: 2025-09-21
+      riesgo: 'bajo', // riesgo_alto: false
+      ips: 'MataSano', // Podría estar asignada a la IPS
+      municipio: 'Turbaco', // Dirección: Turbaco ccl del Coco
+      ultimoControl: null, // No hay controles registrados
+      proximaCita: null,
+      telefono: '3005689745',
+      eps: 'Sanitas',
+      medico: 'Sin médico asignado' // No hay médicos en la BD
+    }
+  ];
 
-    console.log(`🤰 Devueltas ${gestantes.length} gestantes reales`);
+  console.log(`🤰 Devueltas ${gestantes.length} gestantes reales`);
 
-    res.json({
-      success: true,
-      data: gestantes
-    });
-  } catch (error) {
-    console.error('❌ Error obteniendo gestantes:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error obteniendo gestantes: ' + error.message
-    });
-  }
+  res.json({
+    success: true,
+    data: gestantes
+  });
 });
 
 // Médicos endpoints - DATOS REALES (VACÍO)
-app.get('/api/medicos', async (req, res) => {
-  try {
-    console.log('👨‍⚕️ Obteniendo médicos...');
-    
-    // No hay médicos en la base de datos real
-    const medicos = [];
+app.get('/api/medicos', (req, res) => {
+  console.log('👨‍⚕️ Obteniendo médicos...');
+  
+  // No hay médicos en la base de datos real
+  const medicos = [];
 
-    console.log(`👨‍⚕️ Devueltos ${medicos.length} médicos (base de datos vacía)`);
+  console.log(`👨‍⚕️ Devueltos ${medicos.length} médicos (base de datos vacía)`);
 
-    res.json({
-      success: true,
-      data: medicos
-    });
-  } catch (error) {
-    console.error('❌ Error obteniendo médicos:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error obteniendo médicos: ' + error.message
-    });
-  }
+  res.json({
+    success: true,
+    data: medicos
+  });
 });
 
 // Alertas endpoints - DATOS REALES (VACÍO)
-app.get('/api/alertas-automaticas/alertas', async (req, res) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 20;
+app.get('/api/alertas-automaticas/alertas', (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
 
-    console.log('🚨 Obteniendo alertas...');
-    
-    // No hay alertas en la base de datos real
-    const alertas = [];
-    const totalAlertas = 0;
-    const totalPages = 0;
+  console.log('🚨 Obteniendo alertas...');
+  
+  // No hay alertas en la base de datos real
+  const alertas = [];
+  const totalAlertas = 0;
+  const totalPages = 0;
 
-    console.log(`🚨 Devueltas ${alertas.length} alertas (base de datos vacía)`);
+  console.log(`🚨 Devueltas ${alertas.length} alertas (base de datos vacía)`);
 
-    res.json({
-      success: true,
-      data: {
-        alertas,
-        pagination: {
-          page,
-          limit,
-          total: totalAlertas,
-          totalPages
-        }
+  res.json({
+    success: true,
+    data: {
+      alertas,
+      pagination: {
+        page,
+        limit,
+        total: totalAlertas,
+        totalPages
       }
-    });
-  } catch (error) {
-    console.error('❌ Error obteniendo alertas:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error obteniendo alertas: ' + error.message
-    });
-  }
+    }
+  });
 });
 
 // Basic reports endpoint
@@ -330,4 +290,5 @@ app.use('*', (req, res) => {
   });
 });
 
+// Export for Vercel
 module.exports = app;
