@@ -13,6 +13,22 @@ app.use((req, res, next) => {
   next();
 });
 
+// Manejar solicitudes OPTIONS (preflight) ANTES de cualquier otro middleware
+app.options('*', (req, res) => {
+  const origin = req.get('Origin');
+  console.log(`🔧 OPTIONS Request - Origin: ${origin}`);
+  
+  // Configurar headers CORS manualmente para OPTIONS
+  res.header('Access-Control-Allow-Origin', origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, X-HTTP-Method-Override, Access-Control-Request-Method, Access-Control-Request-Headers');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 horas
+  
+  // Responder inmediatamente con 200 para OPTIONS
+  res.status(200).send();
+});
+
 // CORS configuration mejorada
 const corsOptions = {
   origin: function (origin, callback) {
@@ -66,16 +82,13 @@ const corsOptions = {
     'Access-Control-Request-Headers'
   ],
   exposedHeaders: ['Authorization', 'Content-Length', 'X-Total-Count'],
-  optionsSuccessStatus: 204, // Cambiado a 204 que es el estándar para OPTIONS
+  optionsSuccessStatus: 200, // Cambiado a 200 para Vercel
   preflightContinue: false,
   maxAge: 86400 // Cache preflight por 24 horas
 };
 
-// Aplicar CORS middleware
+// Aplicar CORS middleware para solicitudes no-OPTIONS
 app.use(cors(corsOptions));
-
-// Manejar preflight requests explícitamente con la misma configuración
-app.options('*', cors(corsOptions));
 
 app.use(express.json());
 
