@@ -27,6 +27,17 @@ app.use(cors({
 
 app.use(express.json());
 
+// TEST ENDPOINT BEFORE DASHBOARD - Para probar si el dashboard está causando el bloqueo
+console.log('🔍 DEBUG: Registrando endpoint /api/test-before-dashboard');
+app.get('/api/test-before-dashboard', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Test endpoint BEFORE dashboard - working',
+    timestamp: new Date().toISOString()
+  });
+});
+console.log('🔍 DEBUG: Endpoint /api/test-before-dashboard registrado');
+
 // Health check
 app.get('/', (req, res) => {
   res.json({
