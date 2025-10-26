@@ -7,45 +7,60 @@ const prisma = new PrismaClient();
 
 const app = express();
 
+// Configuración CORS usando el paquete cors CORRECTAMENTE
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Lista de orígenes permitidos SIN espacios
+    const allowedOrigins = [
+      'https://madres-digitales-frontend.vercel.app',
+      'https://madres-digitales.vercel.app',
+      'https://madresdigitales.netlify.app',
+      'http://localhost:3008',
+      'http://localhost:3000',
+      'http://192.168.1.60:3008',
+      'http://192.168.1.60:3000'
+    ];
+    
+    // Permitir requests sin origin (herramientas como Postman)
+    if (!origin) {
+      console.log('✅ CORS: Permitiendo solicitud sin origin');
+      return callback(null, true);
+    }
+    
+    // Verificar si el origen está en la lista permitida
+    if (allowedOrigins.includes(origin)) {
+      console.log(`✅ CORS: Origen permitido: ${origin}`);
+      return callback(null, true);
+    } else {
+      console.log('🚨 CORS: Origen no permitido:', origin);
+      return callback(new Error('No permitido por CORS'), false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Origin',
+    'X-Requested-With',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'Cache-Control',
+    'X-HTTP-Method-Override',
+    'Access-Control-Request-Method',
+    'Access-Control-Request-Headers'
+  ],
+  exposedHeaders: ['Authorization', 'Content-Length', 'X-Total-Count'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false,
+  maxAge: 86400 // 24 horas
+};
+
+// APLICAR CORS ANTES QUE CUALQUIER OTRA COSA
+app.use(cors(corsOptions));
+
 // Middleware para logging de solicitudes
 app.use((req, res, next) => {
   console.log(`🌐 ${req.method} ${req.path} - Origin: ${req.get('Origin')}`);
-  next();
-});
-
-// Configuración CORS CORRECTA según la guía
-const allowedOrigins = [
-  'https://madres-digitales-frontend.vercel.app',
-  'https://madres-digitales.vercel.app',
-  'https://madresdigitales.netlify.app',
-  'http://localhost:3008',
-  'http://localhost:3000',
-  'http://192.168.1.60:3008',
-  'http://192.168.1.60:3000'
-];
-
-// Middleware CORS manual y correcto
-app.use((req, res, next) => {
-  const origin = req.get('Origin');
-  
-  // Si el origen está permitido, configurarlo explícitamente
-  if (allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  
-  // Headers CORS siempre presentes
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cache-Control, X-HTTP-Method-Override, Access-Control-Request-Method, Access-Control-Request-Headers');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Max-Age', '86400'); // 24 horas de cache para preflight
-  
-  // Manejar solicitudes OPTIONS (preflight)
-  if (req.method === 'OPTIONS') {
-    console.log('🔧 OPTIONS Request - Origin:', origin, 'Respondiendo con 200');
-    res.status(200).send();
-    return;
-  }
-  
   next();
 });
 
