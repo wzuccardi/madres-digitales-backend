@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const { PrismaClient } = require('@prisma/client');
+
+// Inicializar Prisma Client
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -88,154 +92,436 @@ app.put('/api/auth/profile', (req, res) => {
 // Dashboard endpoints - DATOS REALES DE LA BASE DE DATOS
 app.get('/api/dashboard/estadisticas', async (req, res) => {
   try {
-    // Aquí conectaremos con la base de datos real
-    // Por ahora, datos de ejemplo que coincidan con la realidad
+    console.log('🔍 Obteniendo estadísticas reales de la base de datos...');
+    
+    // Obtener datos reales de la base de datos
+    const [
+      totalGestantes,
+      totalMedicos,
+      totalIps,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      controlesHoy
+    ] = await Promise.all([
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } }),
+      prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
+      prisma.alertas.count({ where: { resuelta: false } }),
+      prisma.controles.count({ where: { realizado: true } }),
+      prisma.controles.count({ 
+        where: { 
+          fecha_control: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            lt: new Date(new Date().setHours(23, 59, 59, 999))
+          }
+        } 
+      })
+    ]);
+
+    // Calcular próximas citas (controles programados para los próximos 7 días)
+    const proximosCitas = await prisma.controles.count({
+      where: {
+        realizado: false,
+        fecha_control: {
+          gte: new Date(),
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // próximos 7 días
+        }
+      }
+    });
+
+    console.log('📊 Estadísticas obtenidas:');
+    console.log(`   - Total gestantes: ${totalGestantes}`);
+    console.log(`   - Total médicos: ${totalMedicos}`);
+    console.log(`   - Total IPS: ${totalIps}`);
+    console.log(`   - Gestantes alto riesgo: ${gestantesAltoRiesgo}`);
+    console.log(`   - Alertas activas: ${alertasActivas}`);
+    console.log(`   - Controles realizados: ${controlesRealizados}`);
+    console.log(`   - Controles hoy: ${controlesHoy}`);
+    console.log(`   - Próximas citas: ${proximosCitas}`);
+
     res.json({
       success: true,
       data: {
-        totalGestantes: 2, // Datos reales según lo que mencionas
-        controlesRealizados: 5,
-        alertasActivas: 1,
-        totalMedicos: 3,
-        totalIps: 2,
-        gestantesAltoRiesgo: 1,
-        controlesHoy: 0,
-        proximosCitas: 2
+        totalGestantes,
+        controlesRealizados,
+        alertasActivas,
+        totalMedicos,
+        totalIps,
+        gestantesAltoRiesgo,
+        controlesHoy,
+        proximosCitas
       }
     });
   } catch (error) {
+    console.error('❌ Error obteniendo estadísticas:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo estadísticas'
+      error: 'Error obteniendo estadísticas: ' + error.message
     });
   }
 });
 
 // IPS endpoints
-app.get('/api/ips', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        nombre: 'IPS Cartagena Centro',
-        direccion: 'Calle 30 #15-25',
-        telefono: '300-123-4567',
-        email: 'cartagena@ips.com',
-        municipio: 'Cartagena',
-        estado: 'activo'
+app.get('/api/ips', async (req, res) => {
+  try {
+    console.log('🔍 Obteniendo IPS reales de la base de datos...');
+    
+    const ips = await prisma.ips.findMany({
+      where: { activo: true },
+      include: {
+        municipios: true,
+        medicos: {
+          where: { activo: true }
+        },
+        gestantes: {
+          where: { activa: true }
+        }
       },
-      {
-        id: 2,
-        nombre: 'IPS Magangué',
-        direccion: 'Carrera 10 #8-15',
-        telefono: '300-987-6543',
-        email: 'magangue@ips.com',
-        municipio: 'Magangué',
-        estado: 'activo'
+      orderBy: { fecha_creacion: 'desc' }
+    });
+
+    const ipsFormateadas = ips.map(ipsItem => ({
+      id: ipsItem.id,
+      nombre: ipsItem.nombre,
+      nit: ipsItem.nit,
+      direccion: ipsItem.direccion,
+      telefono: ipsItem.telefono,
+      email: ipsItem.email,
+      municipio: ipsItem.municipios?.nombre || 'Sin municipio',
+      nivel: ipsItem.nivel,
+      estado: ipsItem.activo ? 'activo' : 'inactivo',
+      medicosAsignados: ipsItem.medicos.length,
+      gestantesAsignadas: ipsItem.gestantes.length,
+      coordenadas: {
+        latitud: ipsItem.latitud,
+        longitud: ipsItem.longitud
       }
-    ]
-  });
+    }));
+
+    console.log(`📊 Encontradas ${ipsFormateadas.length} IPS activas`);
+
+    res.json({
+      success: true,
+      data: ipsFormateadas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo IPS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo IPS: ' + error.message
+    });
+  }
 });
 
 // Gestantes endpoints
-app.get('/api/gestantes', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        nombre: 'María González',
-        documento: '12345678',
-        edad: 28,
-        semanas: 24,
-        riesgo: 'bajo',
-        ips: 'IPS Cartagena Centro',
-        ultimoControl: '2025-10-20',
-        proximaCita: '2025-11-15'
+app.get('/api/gestantes', async (req, res) => {
+  try {
+    console.log('🔍 Obteniendo gestantes reales de la base de datos...');
+    
+    const gestantes = await prisma.gestantes.findMany({
+      where: { activa: true },
+      include: {
+        ips_asignada: true,
+        municipios: true,
+        medico_tratante: true,
+        controles: {
+          orderBy: { fecha_control: 'desc' },
+          take: 1
+        }
       },
-      {
-        id: 2,
-        nombre: 'Ana Rodríguez',
-        documento: '87654321',
-        edad: 32,
-        semanas: 18,
-        riesgo: 'alto',
-        ips: 'IPS Magangué',
-        ultimoControl: '2025-10-18',
-        proximaCita: '2025-11-10'
+      orderBy: { fecha_creacion: 'desc' }
+    });
+
+    const gestantesFormateadas = gestantes.map(gestante => {
+      // Calcular edad
+      const edad = gestante.fecha_nacimiento 
+        ? Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000))
+        : null;
+
+      // Calcular semanas de gestación
+      let semanas = null;
+      if (gestante.fecha_ultima_menstruacion) {
+        const diasGestacion = Math.floor((new Date() - new Date(gestante.fecha_ultima_menstruacion)) / (24 * 60 * 60 * 1000));
+        semanas = Math.floor(diasGestacion / 7);
       }
-    ]
-  });
+
+      // Último control
+      const ultimoControl = gestante.controles.length > 0 
+        ? gestante.controles[0].fecha_control.toISOString().split('T')[0]
+        : null;
+
+      return {
+        id: gestante.id,
+        nombre: gestante.nombre,
+        documento: gestante.documento,
+        edad,
+        semanas,
+        riesgo: gestante.riesgo_alto ? 'alto' : 'bajo',
+        ips: gestante.ips_asignada?.nombre || 'Sin IPS asignada',
+        municipio: gestante.municipios?.nombre || 'Sin municipio',
+        ultimoControl,
+        proximaCita: null, // Se puede calcular desde controles programados
+        telefono: gestante.telefono,
+        eps: gestante.eps,
+        medico: gestante.medico_tratante?.nombre || 'Sin médico asignado'
+      };
+    });
+
+    console.log(`📊 Encontradas ${gestantesFormateadas.length} gestantes activas`);
+
+    res.json({
+      success: true,
+      data: gestantesFormateadas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo gestantes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo gestantes: ' + error.message
+    });
+  }
 });
 
 // Médicos endpoints
-app.get('/api/medicos', (req, res) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: 1,
-        nombre: 'Dr. Carlos Pérez',
-        especialidad: 'Ginecología',
-        documento: '98765432',
-        telefono: '300-555-1234',
-        email: 'carlos.perez@medico.com',
-        ips: 'IPS Cartagena Centro',
-        estado: 'activo'
+app.get('/api/medicos', async (req, res) => {
+  try {
+    console.log('🔍 Obteniendo médicos reales de la base de datos...');
+    
+    const medicos = await prisma.medicos.findMany({
+      where: { activo: true },
+      include: {
+        ips: true,
+        municipios: true,
+        gestantes: {
+          where: { activa: true }
+        }
       },
-      {
-        id: 2,
-        nombre: 'Dra. Laura Martínez',
-        especialidad: 'Obstetricia',
-        documento: '11223344',
-        telefono: '300-555-5678',
-        email: 'laura.martinez@medico.com',
-        ips: 'IPS Magangué',
-        estado: 'activo'
-      },
-      {
-        id: 3,
-        nombre: 'Dr. Juan Herrera',
-        especialidad: 'Medicina General',
-        documento: '55667788',
-        telefono: '300-555-9012',
-        email: 'juan.herrera@medico.com',
-        ips: 'IPS Cartagena Centro',
-        estado: 'activo'
-      }
-    ]
-  });
+      orderBy: { fecha_creacion: 'desc' }
+    });
+
+    const medicosFormateados = medicos.map(medico => ({
+      id: medico.id,
+      nombre: medico.nombre,
+      especialidad: medico.especialidad || 'No especificada',
+      documento: medico.documento,
+      telefono: medico.telefono,
+      email: medico.email,
+      ips: medico.ips?.nombre || 'Sin IPS asignada',
+      municipio: medico.municipios?.nombre || 'Sin municipio',
+      registroMedico: medico.registro_medico,
+      estado: medico.activo ? 'activo' : 'inactivo',
+      gestantesAsignadas: medico.gestantes.length
+    }));
+
+    console.log(`📊 Encontrados ${medicosFormateados.length} médicos activos`);
+
+    res.json({
+      success: true,
+      data: medicosFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo médicos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo médicos: ' + error.message
+    });
+  }
 });
 
 // Alertas endpoints
-app.get('/api/alertas-automaticas/alertas', (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-  
-  res.json({
-    success: true,
-    data: {
-      alertas: [
-        {
-          id: 1,
-          tipo: 'alto_riesgo',
-          titulo: 'Gestante de alto riesgo',
-          descripcion: 'Ana Rodríguez requiere seguimiento especial',
-          gestante: 'Ana Rodríguez',
-          fecha: '2025-10-25',
-          prioridad: 'crítica',
-          estado: 'activa'
+app.get('/api/alertas-automaticas/alertas', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    console.log('🔍 Obteniendo alertas reales de la base de datos...');
+    
+    const [alertas, totalAlertas] = await Promise.all([
+      prisma.alertas.findMany({
+        where: { resuelta: false },
+        include: {
+          gestante: true,
+          madrina: true
+        },
+        orderBy: { fecha_creacion: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.alertas.count({ where: { resuelta: false } })
+    ]);
+
+    const alertasFormateadas = alertas.map(alerta => ({
+      id: alerta.id,
+      tipo: alerta.tipo_alerta,
+      titulo: `Alerta ${alerta.tipo_alerta}`,
+      descripcion: alerta.mensaje,
+      gestante: alerta.gestante.nombre,
+      gestanteId: alerta.gestante.id,
+      fecha: alerta.fecha_creacion.toISOString().split('T')[0],
+      prioridad: alerta.nivel_prioridad,
+      estado: alerta.estado || 'pendiente',
+      madrina: alerta.madrina?.nombre || 'Sin asignar',
+      esAutomatica: alerta.es_automatica,
+      scoreRiesgo: alerta.score_riesgo
+    }));
+
+    const totalPages = Math.ceil(totalAlertas / limit);
+
+    console.log(`📊 Encontradas ${alertasFormateadas.length} alertas activas de ${totalAlertas} total`);
+
+    res.json({
+      success: true,
+      data: {
+        alertas: alertasFormateadas,
+        pagination: {
+          page,
+          limit,
+          total: totalAlertas,
+          totalPages
         }
-      ],
-      pagination: {
-        page: page,
-        limit: limit,
-        total: 1,
-        totalPages: 1
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo alertas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo alertas: ' + error.message
+    });
+  }
+});
+
+// Endpoint para consulta completa de la base de datos
+app.get('/api/database/status', async (req, res) => {
+  try {
+    console.log('🔍 Realizando consulta completa de la base de datos...');
+    
+    const [
+      totalUsuarios,
+      totalMunicipios,
+      totalIps,
+      totalMedicos,
+      totalGestantes,
+      totalAlertas,
+      totalControles,
+      totalContenidos,
+      gestantesActivas,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      medicosActivos,
+      ipsActivas
+    ] = await Promise.all([
+      prisma.usuarios.count(),
+      prisma.municipios.count(),
+      prisma.ips.count(),
+      prisma.medicos.count(),
+      prisma.gestantes.count(),
+      prisma.alertas.count(),
+      prisma.controles.count(),
+      prisma.contenidos.count(),
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
+      prisma.alertas.count({ where: { resuelta: false } }),
+      prisma.controles.count({ where: { realizado: true } }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } })
+    ]);
+
+    // Obtener algunos registros de ejemplo
+    const [
+      usuariosEjemplo,
+      gestantesEjemplo,
+      medicosEjemplo,
+      ipsEjemplo,
+      alertasEjemplo
+    ] = await Promise.all([
+      prisma.usuarios.findMany({ take: 3, select: { id: true, nombre: true, email: true, rol: true } }),
+      prisma.gestantes.findMany({ 
+        take: 3, 
+        where: { activa: true },
+        select: { id: true, nombre: true, documento: true, riesgo_alto: true }
+      }),
+      prisma.medicos.findMany({ 
+        take: 3, 
+        where: { activo: true },
+        select: { id: true, nombre: true, especialidad: true }
+      }),
+      prisma.ips.findMany({ 
+        take: 3, 
+        where: { activo: true },
+        select: { id: true, nombre: true, municipio_id: true }
+      }),
+      prisma.alertas.findMany({ 
+        take: 3, 
+        where: { resuelta: false },
+        select: { id: true, tipo_alerta: true, nivel_prioridad: true, mensaje: true }
+      })
+    ]);
+
+    const databaseStatus = {
+      resumen: {
+        totalUsuarios,
+        totalMunicipios,
+        totalIps,
+        totalMedicos,
+        totalGestantes,
+        totalAlertas,
+        totalControles,
+        totalContenidos
+      },
+      estadisticasActivas: {
+        gestantesActivas,
+        gestantesAltoRiesgo,
+        alertasActivas,
+        controlesRealizados,
+        medicosActivos,
+        ipsActivas
+      },
+      ejemplosRegistros: {
+        usuarios: usuariosEjemplo,
+        gestantes: gestantesEjemplo,
+        medicos: medicosEjemplo,
+        ips: ipsEjemplo,
+        alertas: alertasEjemplo
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('📊 ESTADO COMPLETO DE LA BASE DE DATOS:');
+    console.log('='.repeat(50));
+    console.log('📈 RESUMEN GENERAL:');
+    console.log(`   - Total usuarios: ${totalUsuarios}`);
+    console.log(`   - Total municipios: ${totalMunicipios}`);
+    console.log(`   - Total IPS: ${totalIps}`);
+    console.log(`   - Total médicos: ${totalMedicos}`);
+    console.log(`   - Total gestantes: ${totalGestantes}`);
+    console.log(`   - Total alertas: ${totalAlertas}`);
+    console.log(`   - Total controles: ${totalControles}`);
+    console.log(`   - Total contenidos: ${totalContenidos}`);
+    console.log('');
+    console.log('📊 ESTADÍSTICAS ACTIVAS:');
+    console.log(`   - Gestantes activas: ${gestantesActivas}`);
+    console.log(`   - Gestantes alto riesgo: ${gestantesAltoRiesgo}`);
+    console.log(`   - Alertas activas: ${alertasActivas}`);
+    console.log(`   - Controles realizados: ${controlesRealizados}`);
+    console.log(`   - Médicos activos: ${medicosActivos}`);
+    console.log(`   - IPS activas: ${ipsActivas}`);
+    console.log('='.repeat(50));
+
+    res.json({
+      success: true,
+      data: databaseStatus
+    });
+  } catch (error) {
+    console.error('❌ Error consultando estado de la base de datos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error consultando base de datos: ' + error.message
+    });
+  }
 });
 
 // Basic reports endpoint
