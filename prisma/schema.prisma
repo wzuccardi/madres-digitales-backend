@@ -95,10 +95,11 @@ model medicos {
   tipo_documento      String?   @default("cedula")
 
   // Relaciones
-  ips                 ips?        @relation(fields: [ips_id], references: [id])
-  municipios          municipios? @relation(fields: [municipio_id], references: [id])
+  ips                 ips?                @relation(fields: [ips_id], references: [id])
+  municipios          municipios?         @relation(fields: [municipio_id], references: [id])
   gestantes           gestantes[]
   controles           controles[]
+  control_prenatal    control_prenatal[]
 
   @@map("medicos")
 }
@@ -228,6 +229,7 @@ model control_prenatal {
 
   // Relaciones
   gestante                gestantes @relation(fields: [gestante_id], references: [id], onDelete: Cascade)
+  medico                  medicos?  @relation(fields: [medico_id], references: [id], onDelete: SetNull)
 
   @@map("control_prenatal")
 }
