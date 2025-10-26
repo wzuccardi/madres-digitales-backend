@@ -549,15 +549,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  console.log('❌ 404 - Ruta no encontrada:', req.originalUrl);
-  res.status(404).json({
-    success: false,
-    error: 'Ruta no encontrada',
-    path: req.originalUrl
-  });
-});
+// 404 handler - TEMPORARILY COMMENTED OUT FOR DEBUGGING
+// app.use('*', (req, res) => {
+//   console.log('❌ 404 - Ruta no encontrada:', req.originalUrl);
+//   res.status(404).json({
+//     success: false,
+//     error: 'Ruta no encontrada',
+//     path: req.originalUrl
+//   });
+// });
 
 // Graceful shutdown
 process.on('beforeExit', async () => {
