@@ -2,8 +2,14 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 
-// Inicializar Prisma Client
-const prisma = new PrismaClient();
+// Inicializar Prisma Client con lazy loading
+let prisma;
+try {
+  prisma = new PrismaClient();
+  console.log('✅ Prisma Client inicializado correctamente');
+} catch (error) {
+  console.error('❌ Error inicializando Prisma Client:', error);
+}
 
 const app = express();
 
