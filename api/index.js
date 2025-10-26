@@ -163,6 +163,15 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 });
 
+// TEST ENDPOINT - Simple test right after working endpoint
+app.get('/api/test-simple', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Test endpoint working',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // IPS endpoints - DATOS REALES
 app.get('/api/ips', async (req, res) => {
   try {
