@@ -4,15 +4,20 @@
   "main": "api/index.js",
   "scripts": {
     "dev": "node api/index.js",
-    "build": "echo 'Build completed - using api/index.js directly'",
+    "build": "npx prisma generate",
     "start": "node api/index.js",
-    "vercel-build": "echo 'Vercel build completed - using api/index.js'",
+    "vercel-build": "npx prisma generate",
+    "postinstall": "npx prisma generate",
     "test": "echo 'No tests configured'"
   },
   "dependencies": {
+    "@prisma/client": "^5.10.0",
     "express": "^4.18.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "prisma": "^5.10.0"
   },
   "engines": {
     "node": ">=18.0.0"

@@ -1,5 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const { PrismaClient } = require('@prisma/client');
+
+// Inicializar Prisma Client
+const prisma = new PrismaClient();
 
 const app = express();
 
@@ -91,140 +95,433 @@ app.put('/api/auth/profile', (req, res) => {
   });
 });
 
-// Dashboard endpoints - DATOS BASADOS EN LA BASE DE DATOS REAL
-app.get('/api/dashboard/estadisticas', (req, res) => {
-  console.log('📊 Obteniendo estadísticas del dashboard...');
-  
-  // Datos basados en el dump de la base de datos real:
-  // - 1 gestante activa (Kathiuska)
-  // - 1 IPS activa (MataSano)
-  // - 0 médicos
-  // - 0 alertas
-  // - 0 controles
-  const estadisticas = {
-    totalGestantes: 1,        // 1 gestante real: Kathiuska
-    controlesRealizados: 0,   // 0 controles en la BD
-    alertasActivas: 0,        // 0 alertas en la BD
-    totalMedicos: 0,          // 0 médicos en la BD
-    totalIps: 1,              // 1 IPS real: MataSano
-    gestantesAltoRiesgo: 0,   // Kathiuska no es alto riesgo
-    controlesHoy: 0,          // 0 controles hoy
-    proximosCitas: 0          // 0 citas programadas
-  };
+// Dashboard endpoints - DATOS REALES DE LA BASE DE DATOS
+app.get('/api/dashboard/estadisticas', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo estadísticas reales de la base de datos...');
+    
+    // Obtener datos reales de la base de datos
+    const [
+      totalGestantes,
+      totalMedicos,
+      totalIps,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      controlesHoy
+    ] = await Promise.all([
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } }),
+      prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
+      prisma.alertas.count({ where: { resuelta: false } }),
+      prisma.controles.count({ where: { realizado: true } }),
+      prisma.controles.count({ 
+        where: { 
+          fecha_control: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            lt: new Date(new Date().setHours(23, 59, 59, 999))
+          }
+        } 
+      })
+    ]);
 
-  console.log('📊 Estadísticas devueltas (datos reales):', estadisticas);
+    // Calcular próximas citas (controles programados para los próximos 7 días)
+    const proximosCitas = await prisma.controles.count({
+      where: {
+        realizado: false,
+        fecha_control: {
+          gte: new Date(),
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // próximos 7 días
+        }
+      }
+    });
 
-  res.json({
-    success: true,
-    data: estadisticas
-  });
+    const estadisticas = {
+      totalGestantes,
+      controlesRealizados,
+      alertasActivas,
+      totalMedicos,
+      totalIps,
+      gestantesAltoRiesgo,
+      controlesHoy,
+      proximosCitas
+    };
+
+    console.log('📊 Estadísticas obtenidas de la BD:', estadisticas);
+
+    res.json({
+      success: true,
+      data: estadisticas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
 });
 
 // IPS endpoints - DATOS REALES
-app.get('/api/ips', (req, res) => {
-  console.log('🏥 Obteniendo IPS...');
-  
-  // Datos reales de la base de datos
-  const ips = [
-    {
-      id: 'cmh1injy2000181kjhefzdneb',
-      nombre: 'MataSano',
-      nit: '789654123',
-      direccion: 'las piedras',
-      telefono: '65478912',
-      email: 'matasano@gmail.com',
-      municipio: 'ARJONA', // municipio_id: 13052
-      nivel: 'primario',
-      estado: 'activo',
-      medicosAsignados: 0,
-      gestantesAsignadas: 1, // Kathiuska podría estar asignada aquí
+app.get('/api/ips', async (req, res) => {
+  try {
+    console.log('🏥 Obteniendo IPS reales de la base de datos...');
+    
+    const ips = await prisma.ips.findMany({
+      where: { activo: true },
+      include: {
+        municipios: true,
+        medicos: {
+          where: { activo: true }
+        },
+        gestantes: {
+          where: { activa: true }
+        }
+      },
+      orderBy: { fecha_creacion: 'desc' }
+    });
+
+    const ipsFormateadas = ips.map(ipsItem => ({
+      id: ipsItem.id,
+      nombre: ipsItem.nombre,
+      nit: ipsItem.nit,
+      direccion: ipsItem.direccion,
+      telefono: ipsItem.telefono,
+      email: ipsItem.email,
+      municipio: ipsItem.municipios?.nombre || 'Sin municipio',
+      nivel: ipsItem.nivel,
+      estado: ipsItem.activo ? 'activo' : 'inactivo',
+      medicosAsignados: ipsItem.medicos.length,
+      gestantesAsignadas: ipsItem.gestantes.length,
       coordenadas: {
-        latitud: 10.44542070,
-        longitud: -75.51764312
+        latitud: ipsItem.latitud,
+        longitud: ipsItem.longitud
       }
-    }
-  ];
+    }));
 
-  console.log(`🏥 Devueltas ${ips.length} IPS reales`);
+    console.log(`🏥 Encontradas ${ipsFormateadas.length} IPS activas`);
 
-  res.json({
-    success: true,
-    data: ips
-  });
+    res.json({
+      success: true,
+      data: ipsFormateadas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo IPS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo IPS: ' + error.message
+    });
+  }
 });
 
 // Gestantes endpoints - DATOS REALES
-app.get('/api/gestantes', (req, res) => {
-  console.log('🤰 Obteniendo gestantes...');
-  
-  // Datos reales de la base de datos
-  const gestantes = [
-    {
-      id: 'cmh1dudh10001ort4r7212qu4',
-      nombre: 'Kathiuska',
-      documento: '459874562',
-      edad: 24, // Nacida en 2000-10-27, calculado aproximadamente
-      semanas: 14, // Calculado desde fecha_ultima_menstruacion: 2025-09-21
-      riesgo: 'bajo', // riesgo_alto: false
-      ips: 'MataSano', // Podría estar asignada a la IPS
-      municipio: 'Turbaco', // Dirección: Turbaco ccl del Coco
-      ultimoControl: null, // No hay controles registrados
-      proximaCita: null,
-      telefono: '3005689745',
-      eps: 'Sanitas',
-      medico: 'Sin médico asignado' // No hay médicos en la BD
-    }
-  ];
+app.get('/api/gestantes', async (req, res) => {
+  try {
+    console.log('🤰 Obteniendo gestantes reales de la base de datos...');
+    
+    const gestantes = await prisma.gestantes.findMany({
+      where: { activa: true },
+      include: {
+        ips_asignada: true,
+        municipios: true,
+        medico_tratante: true,
+        controles: {
+          orderBy: { fecha_control: 'desc' },
+          take: 1
+        }
+      },
+      orderBy: { fecha_creacion: 'desc' }
+    });
 
-  console.log(`🤰 Devueltas ${gestantes.length} gestantes reales`);
+    const gestantesFormateadas = gestantes.map(gestante => {
+      // Calcular edad
+      const edad = gestante.fecha_nacimiento 
+        ? Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000))
+        : null;
 
-  res.json({
-    success: true,
-    data: gestantes
-  });
-});
-
-// Médicos endpoints - DATOS REALES (VACÍO)
-app.get('/api/medicos', (req, res) => {
-  console.log('👨‍⚕️ Obteniendo médicos...');
-  
-  // No hay médicos en la base de datos real
-  const medicos = [];
-
-  console.log(`👨‍⚕️ Devueltos ${medicos.length} médicos (base de datos vacía)`);
-
-  res.json({
-    success: true,
-    data: medicos
-  });
-});
-
-// Alertas endpoints - DATOS REALES (VACÍO)
-app.get('/api/alertas-automaticas/alertas', (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
-
-  console.log('🚨 Obteniendo alertas...');
-  
-  // No hay alertas en la base de datos real
-  const alertas = [];
-  const totalAlertas = 0;
-  const totalPages = 0;
-
-  console.log(`🚨 Devueltas ${alertas.length} alertas (base de datos vacía)`);
-
-  res.json({
-    success: true,
-    data: {
-      alertas,
-      pagination: {
-        page,
-        limit,
-        total: totalAlertas,
-        totalPages
+      // Calcular semanas de gestación
+      let semanas = null;
+      if (gestante.fecha_ultima_menstruacion) {
+        const diasGestacion = Math.floor((new Date() - new Date(gestante.fecha_ultima_menstruacion)) / (24 * 60 * 60 * 1000));
+        semanas = Math.floor(diasGestacion / 7);
       }
-    }
-  });
+
+      // Último control
+      const ultimoControl = gestante.controles.length > 0 
+        ? gestante.controles[0].fecha_control.toISOString().split('T')[0]
+        : null;
+
+      return {
+        id: gestante.id,
+        nombre: gestante.nombre,
+        documento: gestante.documento,
+        edad,
+        semanas,
+        riesgo: gestante.riesgo_alto ? 'alto' : 'bajo',
+        ips: gestante.ips_asignada?.nombre || 'Sin IPS asignada',
+        municipio: gestante.municipios?.nombre || 'Sin municipio',
+        ultimoControl,
+        proximaCita: null, // Se puede calcular desde controles programados
+        telefono: gestante.telefono,
+        eps: gestante.eps,
+        medico: gestante.medico_tratante?.nombre || 'Sin médico asignado'
+      };
+    });
+
+    console.log(`🤰 Encontradas ${gestantesFormateadas.length} gestantes activas`);
+
+    res.json({
+      success: true,
+      data: gestantesFormateadas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo gestantes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo gestantes: ' + error.message
+    });
+  }
+});
+
+// Médicos endpoints - DATOS REALES
+app.get('/api/medicos', async (req, res) => {
+  try {
+    console.log('👨‍⚕️ Obteniendo médicos reales de la base de datos...');
+    
+    const medicos = await prisma.medicos.findMany({
+      where: { activo: true },
+      include: {
+        ips: true,
+        municipios: true,
+        gestantes: {
+          where: { activa: true }
+        }
+      },
+      orderBy: { fecha_creacion: 'desc' }
+    });
+
+    const medicosFormateados = medicos.map(medico => ({
+      id: medico.id,
+      nombre: medico.nombre,
+      especialidad: medico.especialidad || 'No especificada',
+      documento: medico.documento,
+      telefono: medico.telefono,
+      email: medico.email,
+      ips: medico.ips?.nombre || 'Sin IPS asignada',
+      municipio: medico.municipios?.nombre || 'Sin municipio',
+      registroMedico: medico.registro_medico,
+      estado: medico.activo ? 'activo' : 'inactivo',
+      gestantesAsignadas: medico.gestantes.length
+    }));
+
+    console.log(`👨‍⚕️ Encontrados ${medicosFormateados.length} médicos activos`);
+
+    res.json({
+      success: true,
+      data: medicosFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo médicos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo médicos: ' + error.message
+    });
+  }
+});
+
+// Alertas endpoints - DATOS REALES
+app.get('/api/alertas-automaticas/alertas', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
+
+    console.log('🚨 Obteniendo alertas reales de la base de datos...');
+    
+    const [alertas, totalAlertas] = await Promise.all([
+      prisma.alertas.findMany({
+        where: { resuelta: false },
+        include: {
+          gestante: true,
+          madrina: true
+        },
+        orderBy: { fecha_creacion: 'desc' },
+        skip: offset,
+        take: limit
+      }),
+      prisma.alertas.count({ where: { resuelta: false } })
+    ]);
+
+    const alertasFormateadas = alertas.map(alerta => ({
+      id: alerta.id,
+      tipo: alerta.tipo_alerta,
+      titulo: `Alerta ${alerta.tipo_alerta}`,
+      descripcion: alerta.mensaje,
+      gestante: alerta.gestante.nombre,
+      gestanteId: alerta.gestante.id,
+      fecha: alerta.fecha_creacion.toISOString().split('T')[0],
+      prioridad: alerta.nivel_prioridad,
+      estado: alerta.estado || 'pendiente',
+      madrina: alerta.madrina?.nombre || 'Sin asignar',
+      esAutomatica: alerta.es_automatica,
+      scoreRiesgo: alerta.score_riesgo
+    }));
+
+    const totalPages = Math.ceil(totalAlertas / limit);
+
+    console.log(`🚨 Encontradas ${alertasFormateadas.length} alertas activas de ${totalAlertas} total`);
+
+    res.json({
+      success: true,
+      data: {
+        alertas: alertasFormateadas,
+        pagination: {
+          page,
+          limit,
+          total: totalAlertas,
+          totalPages
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo alertas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo alertas: ' + error.message
+    });
+  }
+});
+
+// Endpoint para consulta completa de la base de datos
+app.get('/api/database/status', async (req, res) => {
+  try {
+    console.log('🔍 Realizando consulta completa de la base de datos...');
+    
+    const [
+      totalUsuarios,
+      totalMunicipios,
+      totalIps,
+      totalMedicos,
+      totalGestantes,
+      totalAlertas,
+      totalControles,
+      totalContenidos,
+      gestantesActivas,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      medicosActivos,
+      ipsActivas
+    ] = await Promise.all([
+      prisma.usuarios.count(),
+      prisma.municipios.count(),
+      prisma.ips.count(),
+      prisma.medicos.count(),
+      prisma.gestantes.count(),
+      prisma.alertas.count(),
+      prisma.controles.count(),
+      prisma.contenidos.count(),
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.gestantes.count({ where: { activa: true, riesgo_alto: true } }),
+      prisma.alertas.count({ where: { resuelta: false } }),
+      prisma.controles.count({ where: { realizado: true } }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } })
+    ]);
+
+    // Obtener algunos registros de ejemplo
+    const [
+      usuariosEjemplo,
+      gestantesEjemplo,
+      medicosEjemplo,
+      ipsEjemplo,
+      alertasEjemplo
+    ] = await Promise.all([
+      prisma.usuarios.findMany({ take: 3, select: { id: true, nombre: true, email: true, rol: true } }),
+      prisma.gestantes.findMany({ 
+        take: 3, 
+        where: { activa: true },
+        select: { id: true, nombre: true, documento: true, riesgo_alto: true }
+      }),
+      prisma.medicos.findMany({ 
+        take: 3, 
+        where: { activo: true },
+        select: { id: true, nombre: true, especialidad: true }
+      }),
+      prisma.ips.findMany({ 
+        take: 3, 
+        where: { activo: true },
+        select: { id: true, nombre: true, municipio_id: true }
+      }),
+      prisma.alertas.findMany({ 
+        take: 3, 
+        where: { resuelta: false },
+        select: { id: true, tipo_alerta: true, nivel_prioridad: true, mensaje: true }
+      })
+    ]);
+
+    const databaseStatus = {
+      resumen: {
+        totalUsuarios,
+        totalMunicipios,
+        totalIps,
+        totalMedicos,
+        totalGestantes,
+        totalAlertas,
+        totalControles,
+        totalContenidos
+      },
+      estadisticasActivas: {
+        gestantesActivas,
+        gestantesAltoRiesgo,
+        alertasActivas,
+        controlesRealizados,
+        medicosActivos,
+        ipsActivas
+      },
+      ejemplosRegistros: {
+        usuarios: usuariosEjemplo,
+        gestantes: gestantesEjemplo,
+        medicos: medicosEjemplo,
+        ips: ipsEjemplo,
+        alertas: alertasEjemplo
+      },
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('📊 ESTADO COMPLETO DE LA BASE DE DATOS:');
+    console.log('='.repeat(50));
+    console.log('📈 RESUMEN GENERAL:');
+    console.log(`   - Total usuarios: ${totalUsuarios}`);
+    console.log(`   - Total municipios: ${totalMunicipios}`);
+    console.log(`   - Total IPS: ${totalIps}`);
+    console.log(`   - Total médicos: ${totalMedicos}`);
+    console.log(`   - Total gestantes: ${totalGestantes}`);
+    console.log(`   - Total alertas: ${totalAlertas}`);
+    console.log(`   - Total controles: ${totalControles}`);
+    console.log(`   - Total contenidos: ${totalContenidos}`);
+    console.log('');
+    console.log('📊 ESTADÍSTICAS ACTIVAS:');
+    console.log(`   - Gestantes activas: ${gestantesActivas}`);
+    console.log(`   - Gestantes alto riesgo: ${gestantesAltoRiesgo}`);
+    console.log(`   - Alertas activas: ${alertasActivas}`);
+    console.log(`   - Controles realizados: ${controlesRealizados}`);
+    console.log(`   - Médicos activos: ${medicosActivos}`);
+    console.log(`   - IPS activas: ${ipsActivas}`);
+    console.log('='.repeat(50));
+
+    res.json({
+      success: true,
+      data: databaseStatus
+    });
+  } catch (error) {
+    console.error('❌ Error consultando estado de la base de datos:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error consultando base de datos: ' + error.message
+    });
+  }
 });
 
 // Basic reports endpoint
@@ -288,6 +585,21 @@ app.use('*', (req, res) => {
     error: 'Ruta no encontrada',
     path: req.originalUrl
   });
+});
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
+});
+
+process.on('SIGINT', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
 // Export for Vercel
