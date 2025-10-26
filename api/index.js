@@ -402,63 +402,13 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
   }
 });
 
-// Endpoint para consulta completa de la base de datos
-app.get('/api/database/status', async (req, res) => {
-  try {
-    console.log('🔍 Obteniendo estado de la base de datos...');
-    
-    // Obtener datos básicos de la base de datos usando el patrón que funciona
-    const [
-      totalUsuarios,
-      totalMunicipios,
-      totalIps,
-      totalMedicos,
-      totalGestantes,
-      totalAlertas,
-      totalControles,
-      gestantesActivas,
-      controlesRealizados,
-      alertasActivas
-    ] = await Promise.all([
-      prisma.usuarios.count(),
-      prisma.municipios.count(),
-      prisma.ips.count(),
-      prisma.medicos.count(),
-      prisma.gestantes.count(),
-      prisma.alertas.count(),
-      prisma.control_prenatal.count(),
-      prisma.gestantes.count({ where: { activa: true } }),
-      prisma.control_prenatal.count({ where: { realizado: true } }),
-      prisma.alertas.count({ where: { resuelta: false } })
-    ]);
-
-    const databaseStatus = {
-      totalUsuarios,
-      totalMunicipios,
-      totalIps,
-      totalMedicos,
-      totalGestantes,
-      totalAlertas,
-      totalControles,
-      gestantesActivas,
-      controlesRealizados,
-      alertasActivas,
-      timestamp: new Date().toISOString()
-    };
-
-    console.log('📊 Estado de la BD obtenido:', databaseStatus);
-
-    res.json({
-      success: true,
-      data: databaseStatus
-    });
-  } catch (error) {
-    console.error('❌ Error obteniendo estado de la BD:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error obteniendo estado de la base de datos: ' + error.message
-    });
-  }
+// TEST: Simple endpoint in the exact same place
+app.get('/api/database/status', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Simple test in database/status location',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Alternative database status endpoint
