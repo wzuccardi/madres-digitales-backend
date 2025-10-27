@@ -9,7 +9,7 @@ export const getMunicipiosIntegrados = async (req: Request, res: Response) => {
   try {
     console.log('🏛️ MunicipiosController: Obteniendo municipios integrados con datos reales (optimizado)...');
 
-    const municipios = await prisma.municipio.findMany({
+    const municipios = await prisma.municipios.findMany({
       orderBy: [
         { departamento: 'asc' },
         { nombre: 'asc' },
@@ -28,48 +28,48 @@ export const getMunicipiosIntegrados = async (req: Request, res: Response) => {
       alertasActivas
     ] = await Promise.all([
       // Agrupar gestantes por municipio
-      prisma.gestante.groupBy({
+      prisma.gestantes.groupBy({
         by: ['municipio_id'],
         _count: { id: true },
         where: { municipio_id: { not: null } }
       }),
       // Agrupar gestantes activas por municipio
-      prisma.gestante.groupBy({
+      prisma.gestantes.groupBy({
         by: ['municipio_id'],
         _count: { id: true },
         where: { municipio_id: { not: null }, activa: true }
       }),
       // Agrupar gestantes de alto riesgo por municipio
-      prisma.gestante.groupBy({
+      prisma.gestantes.groupBy({
         by: ['municipio_id'],
         _count: { id: true },
         where: { municipio_id: { not: null }, riesgo_alto: true }
       }),
       // Agrupar médicos por municipio
-      prisma.usuario.groupBy({
+      prisma.usuarios.groupBy({
         by: ['municipio_id'],
         _count: { id: true },
         where: { municipio_id: { not: null }, rol: 'medico' }
       }),
       // Agrupar madrinas por municipio
-      prisma.usuario.groupBy({
+      prisma.usuarios.groupBy({
         by: ['municipio_id'],
         _count: { id: true },
         where: { municipio_id: { not: null }, rol: 'madrina' }
       }),
       // Agrupar IPS por municipio
-      prisma.iPS.groupBy({
+      prisma.ips.groupBy({
         by: ['municipio_id'],
         _count: { id: true },
         where: { municipio_id: { not: null } }
       }),
       // Obtener todas las gestantes con su municipio_id
-      prisma.gestante.findMany({
+      prisma.gestantes.findMany({
         where: { municipio_id: { not: null } },
         select: { id: true, municipio_id: true }
       }),
       // Obtener todas las alertas activas
-      prisma.alerta.findMany({
+      prisma.alertas.findMany({
         where: { resuelta: false },
         select: { gestante_id: true }
       })
@@ -186,7 +186,7 @@ export const getMunicipios = async (req: Request, res: Response) => {
 
     // Obtener municipios con paginación
     const [municipios, total] = await Promise.all([
-      prisma.municipio.findMany({
+      prisma.municipios.findMany({
         where: whereClause,
         orderBy: [
           { departamento: 'asc' },
@@ -195,7 +195,7 @@ export const getMunicipios = async (req: Request, res: Response) => {
         skip,
         take: limitNum,
       }),
-      prisma.municipio.count({ where: whereClause }),
+      prisma.municipios.count({ where: whereClause }),
     ]);
 
     console.log(`✅ MunicipiosController: ${municipios.length} municipios obtenidos de ${total} total`);
@@ -228,7 +228,7 @@ export const getMunicipio = async (req: Request, res: Response) => {
 
     console.log('🏛️ MunicipiosController: Obteniendo municipio:', id);
 
-    const municipio = await prisma.municipio.findUnique({
+    const municipio = await prisma.municipios.findUnique({
       where: { id },
       include: {
         gestantes: {
@@ -298,7 +298,7 @@ export const activarMunicipio = async (req: Request, res: Response) => {
 
     console.log('✅ MunicipiosController: Activando municipio:', id);
 
-    const municipio = await prisma.municipio.update({
+    const municipio = await prisma.municipios.update({
       where: { id },
       data: {
         activo: true,
@@ -349,7 +349,7 @@ export const desactivarMunicipio = async (req: Request, res: Response) => {
     console.log('❌ MunicipiosController: Desactivando municipio:', id);
 
     // Verificar si el municipio tiene gestantes activas
-    const gestantesActivas = await prisma.gestante.count({
+    const gestantesActivas = await prisma.gestantes.count({
       where: {
         municipio_id: id,
         activa: true,
@@ -363,7 +363,7 @@ export const desactivarMunicipio = async (req: Request, res: Response) => {
       });
     }
 
-    const municipio = await prisma.municipio.update({
+    const municipio = await prisma.municipios.update({
       where: { id },
       data: {
         activo: false,
@@ -408,10 +408,10 @@ export const getEstadisticasMunicipios = async (req: Request, res: Response) => 
       municipiosInactivos,
       estadisticasPorDepartamento,
     ] = await Promise.all([
-      prisma.municipio.count(),
-      prisma.municipio.count({ where: { activo: true } }),
-      prisma.municipio.count({ where: { activo: false } }),
-      prisma.municipio.groupBy({
+      prisma.municipios.count(),
+      prisma.municipios.count({ where: { activo: true } }),
+      prisma.municipios.count({ where: { activo: false } }),
+      prisma.municipios.groupBy({
         by: ['departamento'],
         _count: {
           id: true,
@@ -425,7 +425,7 @@ export const getEstadisticasMunicipios = async (req: Request, res: Response) => 
     ]);
 
     // Contar municipios con gestantes activas
-    const gestantesConMunicipio = await prisma.gestante.findMany({
+    const gestantesConMunicipio = await prisma.gestantes.findMany({
       where: { activa: true, municipio_id: { not: null } },
       select: { municipio_id: true },
       distinct: ['municipio_id']
@@ -433,16 +433,16 @@ export const getEstadisticasMunicipios = async (req: Request, res: Response) => 
     const municipiosConGestantes = gestantesConMunicipio.length;
 
     // Contar municipios con madrinas activas
-    const madrinasConMunicipio = await prisma.usuario.findMany({
-      where: { rol: 'madrina', activo: true, municipio_id: { not: null } },
+    const madrinasConMunicipio = await prisma.usuarios.findMany({
+      where: { rol: 'MADRINA', activo: true, municipio_id: { not: null } },
       select: { municipio_id: true },
       distinct: ['municipio_id']
     });
     const municipiosConMadrinas = madrinasConMunicipio.length;
 
     // Contar municipios con médicos activos
-    const medicosConMunicipio = await prisma.usuario.findMany({
-      where: { rol: 'medico', activo: true, municipio_id: { not: null } },
+    const medicosConMunicipio = await prisma.usuarios.findMany({
+      where: { rol: 'MEDICO', activo: true, municipio_id: { not: null } },
       select: { municipio_id: true },
       distinct: ['municipio_id']
     });
@@ -610,7 +610,7 @@ export const importarMunicipiosBolivar = async (req: Request, res: Response) => 
     await importMunicipiosBolivar();
 
     // Obtener estadísticas actualizadas
-    const totalMunicipios = await prisma.municipio.count({
+    const totalMunicipios = await prisma.municipios.count({
       where: {
         departamento: 'BOLÍVAR',
       },
@@ -649,31 +649,31 @@ export const getResumenIntegrado = async (req: Request, res: Response) => {
     const totalMunicipios = await prisma.municipio.count();
     console.log('✅ totalMunicipios:', totalMunicipios);
 
-    const municipiosActivos = await prisma.municipio.count({ where: { activo: true } });
+    const municipiosActivos = await prisma.municipios.count({ where: { activo: true } });
     console.log('✅ municipiosActivos:', municipiosActivos);
 
-    const totalIPS = await prisma.iPS.count();
+    const totalIPS = await prisma.ips.count();
     console.log('✅ totalIPS:', totalIPS);
 
-    const ipsActivas = await prisma.iPS.count({ where: { activo: true } });
+    const ipsActivas = await prisma.ips.count({ where: { activo: true } });
     console.log('✅ ipsActivas:', ipsActivas);
 
-    const totalMedicos = await prisma.medico.count();
+    const totalMedicos = await prisma.medicos.count();
     console.log('✅ totalMedicos:', totalMedicos);
 
-    const medicosActivos = await prisma.medico.count({ where: { activo: true } });
+    const medicosActivos = await prisma.medicos.count({ where: { activo: true } });
     console.log('✅ medicosActivos:', medicosActivos);
 
-    const totalGestantes = await prisma.gestante.count();
+    const totalGestantes = await prisma.gestantes.count();
     console.log('✅ totalGestantes:', totalGestantes);
 
-    const gestantesActivas = await prisma.gestante.count({ where: { activa: true } });
+    const gestantesActivas = await prisma.gestantes.count({ where: { activa: true } });
     console.log('✅ gestantesActivas:', gestantesActivas);
 
-    const alertasActivas = await prisma.alerta.count({ where: { resuelta: false } });
+    const alertasActivas = await prisma.alertas.count({ where: { resuelta: false } });
     console.log('✅ alertasActivas:', alertasActivas);
 
-    const controlesEsteMes = await prisma.controlPrenatal.count({
+    const controlesEsteMes = await prisma.control_prenatal.count({
       where: {
         fecha_control: {
           gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -686,7 +686,7 @@ export const getResumenIntegrado = async (req: Request, res: Response) => {
 
     console.log('🔍 Obteniendo distribución por niveles de atención...');
     // Obtener distribución por niveles de atención
-    const distribucionNiveles = await prisma.iPS.groupBy({
+    const distribucionNiveles = await prisma.ips.groupBy({
       by: ['nivel'],
       _count: {
         id: true
@@ -697,7 +697,7 @@ export const getResumenIntegrado = async (req: Request, res: Response) => {
 
     console.log('🔍 Obteniendo distribución por especialidades...');
     // Obtener distribución por especialidades
-    const distribucionEspecialidades = await prisma.medico.groupBy({
+    const distribucionEspecialidades = await prisma.medicos.groupBy({
       by: ['especialidad'],
       _count: {
         id: true
@@ -711,7 +711,7 @@ export const getResumenIntegrado = async (req: Request, res: Response) => {
 
     console.log('🔍 Obteniendo municipios principales...');
     // Obtener los primeros 5 municipios activos
-    const municipiosTopActividad = await prisma.municipio.findMany({
+    const municipiosTopActividad = await prisma.municipios.findMany({
       where: { activo: true },
       take: 5,
       orderBy: {

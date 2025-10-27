@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { log } from '../config/logger';
 
 const prisma = new PrismaClient();
@@ -37,7 +37,7 @@ export class IPSService {
     try {
       console.log('🏥 Creando IPS:', data);
 
-      const ips = await prisma.iPS.create({
+      const ips = await prisma.ips.create({
         data: {
           nombre: data.nombre,
           nit: data.nit,
@@ -51,9 +51,9 @@ export class IPSService {
           activo: true,
           fecha_creacion: new Date(),
           fecha_actualizacion: new Date()
-        },
+        } as any,
         include: {
-          municipio: true,
+          municipios: true,
           medicos: true,
           gestantes: true
         }
@@ -102,7 +102,7 @@ export class IPSService {
       }
 
       const [ips, total] = await Promise.all([
-        prisma.iPS.findMany({
+        prisma.ips.findMany({
           where,
           include: {
             municipio: true,
@@ -121,7 +121,7 @@ export class IPSService {
           take: filtros?.limite || 100,
           skip: filtros?.offset || 0
         }),
-        prisma.iPS.count({ where })
+        prisma.ips.count({ where })
       ]);
 
       console.log(`🏥 Consulta completada: ${ips.length} IPS encontradas de ${total} totales`);
@@ -146,7 +146,7 @@ export class IPSService {
     try {
       console.log(`🏥 Buscando IPS con ID: ${id}`);
 
-      const ips = await prisma.iPS.findUnique({
+      const ips = await prisma.ips.findUnique({
         where: { id },
         include: {
           municipio: true,
@@ -201,14 +201,14 @@ export class IPSService {
     try {
       console.log(`🏥 Actualizando IPS ${id} con datos:`, data);
 
-      const ips = await prisma.iPS.update({
+      const ips = await prisma.ips.update({
         where: { id },
         data: {
           ...data,
           fecha_actualizacion: new Date()
         },
         include: {
-          municipio: true,
+          municipios: true,
           medicos: true,
           gestantes: true
         }
@@ -237,7 +237,7 @@ export class IPSService {
       console.log(`🏥 Eliminando IPS con ID: ${id}`);
 
       // Verificar si hay médicos o gestantes asociados
-      const asociaciones = await prisma.iPS.findUnique({
+      const asociaciones = await prisma.ips.findUnique({
         where: { id },
         include: {
           _count: {
@@ -258,7 +258,7 @@ export class IPSService {
 
       if (asociaciones._count.medicos > 0 || asociaciones._count.gestantes > 0) {
         // En lugar de eliminar, desactivar
-        await prisma.iPS.update({
+        await prisma.ips.update({
           where: { id },
           data: {
             activo: false,
@@ -280,7 +280,7 @@ export class IPSService {
       }
 
       // Si no hay asociaciones, eliminar completamente
-      await prisma.iPS.delete({
+      await prisma.ips.delete({
         where: { id }
       });
 
@@ -306,18 +306,18 @@ export class IPSService {
       console.log(`🏥 Buscando IPS cercanas a coordenadas [${coordenadas[0]}, ${coordenadas[1]}] en radio de ${radioKm}km`);
 
       // Esta es una consulta simplificada. En producción se usaría PostGIS para consultas geográficas
-      const ips = await prisma.iPS.findMany({
+      const ips = await prisma.ips.findMany({
         where: {
           activo: true,
-          municipio: {
+          municipios: {
             activo: true
           }
         },
         include: {
-          municipio: true,
+          municipios: true,
           medicos: {
             where: { activo: true },
-            include: { municipio: true }
+            include: { municipios: true }
           },
           _count: {
             select: {
@@ -357,21 +357,21 @@ export class IPSService {
       console.log('🏥 Obteniendo estadísticas de IPS');
 
       const [total, porNivel, porMunicipio, activas] = await Promise.all([
-        prisma.iPS.count(),
+        prisma.ips.count(),
         
-        prisma.iPS.groupBy({
+        prisma.ips.groupBy({
           by: ['nivel'],
           _count: { nivel: true }
         }),
         
-        prisma.iPS.groupBy({
+        prisma.ips.groupBy({
           by: ['municipio_id'],
           _count: { municipio_id: true },
           orderBy: { _count: { municipio_id: 'desc' } },
           take: 10
         }),
         
-        prisma.iPS.count({
+        prisma.ips.count({
           where: { activo: true }
         })
       ]);

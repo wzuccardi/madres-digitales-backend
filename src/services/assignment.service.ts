@@ -16,14 +16,14 @@ export class AssignmentService {
         include: {
           municipios: true,
         },
-      }) as any;
+      });
 
       if (!gestante) {
         console.log('❌ AssignmentService: Gestante no encontrada');
         return null;
       }
 
-      console.log('👩‍🤱 AssignmentService: Gestante encontrada:', gestante.nombre, 'Municipio:', gestante.municipio?.nombre);
+      console.log('👩‍🤱 AssignmentService: Gestante encontrada:', gestante.nombre, 'Municipio:', gestante.municipios?.nombre);
 
       // Buscar madrinas disponibles en el mismo municipio
       const madrinasDisponibles = await prisma.usuarios.findMany({
@@ -36,7 +36,7 @@ export class AssignmentService {
           gestantes_madrina: true,
           municipios: true,
         },
-      }) as any;
+      });
 
       console.log('👥 AssignmentService: Madrinas disponibles en el municipio:', madrinasDisponibles.length);
 
@@ -56,7 +56,7 @@ export class AssignmentService {
             gestantes_madrina: true,
             municipios: true,
           },
-        }) as any;
+        });
 
         console.log('🌍 AssignmentService: Madrinas regionales encontradas:', madrinasRegionales.length);
 
@@ -67,10 +67,10 @@ export class AssignmentService {
 
         // Seleccionar la madrina con menos gestantes asignadas
         const madrinaSeleccionada = madrinasRegionales.reduce((prev, current) => {
-          return prev.gestantes_madrina.length <= current.gestantes_madrina.length ? prev : current;
+          return (prev as any).gestantes_madrina.length <= (current as any).gestantes_madrina.length ? prev : current;
         });
 
-        console.log('✅ AssignmentService: Madrina regional seleccionada:', madrinaSeleccionada.nombre, 'Carga actual:', madrinaSeleccionada.gestantes_madrina.length);
+        console.log('✅ AssignmentService: Madrina regional seleccionada:', madrinaSeleccionada.nombre, 'Carga actual:', (madrinaSeleccionada as any).gestantes_madrina.length);
 
         // Asignar la madrina a la gestante
         await prisma.gestantes.update({
@@ -83,10 +83,10 @@ export class AssignmentService {
 
       // Seleccionar la madrina con menos gestantes asignadas en el mismo municipio
       const madrinaSeleccionada = madrinasDisponibles.reduce((prev, current) => {
-        return prev.gestantes_madrina.length <= current.gestantes_madrina.length ? prev : current;
+        return (prev as any).gestantes_madrina.length <= (current as any).gestantes_madrina.length ? prev : current;
       });
 
-      console.log('✅ AssignmentService: Madrina local seleccionada:', madrinaSeleccionada.nombre, 'Carga actual:', madrinaSeleccionada.gestantes_madrina.length);
+      console.log('✅ AssignmentService: Madrina local seleccionada:', madrinaSeleccionada.nombre, 'Carga actual:', (madrinaSeleccionada as any).gestantes_madrina.length);
 
       // Asignar la madrina a la gestante
       await prisma.gestantes.update({
@@ -115,7 +115,7 @@ export class AssignmentService {
           municipios: true,
           ips_asignada: true,
         },
-      }) as any;
+      });
 
       if (!gestante) {
         console.log('❌ AssignmentService: Gestante no encontrada');
@@ -134,11 +134,11 @@ export class AssignmentService {
           include: {
             gestantes: true,
           },
-        }) as any;
+        });
 
         if (medicosIPS.length > 0) {
           const medicoSeleccionado = medicosIPS.reduce((prev, current) => {
-            return prev.gestantes.length <= current.gestantes.length ? prev : current;
+            return (prev as any).gestantes.length <= (current as any).gestantes.length ? prev : current;
           });
 
           console.log('✅ AssignmentService: Médico de IPS seleccionado:', medicoSeleccionado.nombre);
@@ -161,7 +161,7 @@ export class AssignmentService {
         include: {
           gestantes: true,
         },
-      }) as any;
+      });
 
       if (medicosDisponibles.length === 0) {
         console.log('❌ AssignmentService: No hay médicos disponibles en el municipio');
@@ -170,10 +170,10 @@ export class AssignmentService {
 
       // Seleccionar el médico con menos gestantes asignadas
       const medicoSeleccionado = medicosDisponibles.reduce((prev, current) => {
-        return prev.gestantes.length <= current.gestantes.length ? prev : current;
+        return (prev as any).gestantes.length <= (current as any).gestantes.length ? prev : current;
       });
 
-      console.log('✅ AssignmentService: Médico seleccionado:', medicoSeleccionado.nombre, 'Carga actual:', medicoSeleccionado.gestantes.length);
+      console.log('✅ AssignmentService: Médico seleccionado:', medicoSeleccionado.nombre, 'Carga actual:', (medicoSeleccionado as any).gestantes.length);
 
       // Asignar el médico a la gestante
       await prisma.gestantes.update({
@@ -245,30 +245,30 @@ export class AssignmentService {
             where: { activo: true },
           },
         },
-      }) as any;
+      });
 
       return stats.map(municipio => ({
         municipio: {
           id: municipio.id,
           nombre: municipio.nombre,
-          codigo: municipio.codigo,
+          codigo: municipio.codigo_dane,
         },
         gestantes: {
-          total: municipio.gestantes.length,
-          conMadrina: municipio.gestantes.filter(g => g.madrina_id).length,
-          sinMadrina: municipio.gestantes.filter(g => !g.madrina_id).length,
-          conMedico: municipio.gestantes.filter(g => g.medico_tratante_id).length,
-          sinMedico: municipio.gestantes.filter(g => !g.medico_tratante_id).length,
+          total: (municipio as any).gestantes.length,
+          conMadrina: (municipio as any).gestantes.filter((g: any) => g.madrina_id).length,
+          sinMadrina: (municipio as any).gestantes.filter((g: any) => !g.madrina_id).length,
+          conMedico: (municipio as any).gestantes.filter((g: any) => g.medico_tratante_id).length,
+          sinMedico: (municipio as any).gestantes.filter((g: any) => !g.medico_tratante_id).length,
         },
         recursos: {
-          madrinas: municipio.madrinas.length,
-          medicos: municipio.medicos.length,
+          madrinas: (municipio as any).madrinas.length,
+          medicos: (municipio as any).medicos.length,
         },
         cobertura: {
-          madrinas: municipio.gestantes.length > 0 ? 
-            (municipio.gestantes.filter(g => g.madrina_id).length / municipio.gestantes.length * 100).toFixed(1) + '%' : '0%',
-          medicos: municipio.gestantes.length > 0 ? 
-            (municipio.gestantes.filter(g => g.medico_tratante_id).length / municipio.gestantes.length * 100).toFixed(1) + '%' : '0%',
+          madrinas: (municipio as any).gestantes.length > 0 ?
+            (((municipio as any).gestantes.filter((g: any) => g.madrina_id).length / (municipio as any).gestantes.length * 100).toFixed(1) + '%') : '0%',
+          medicos: (municipio as any).gestantes.length > 0 ?
+            (((municipio as any).gestantes.filter((g: any) => g.medico_tratante_id).length / (municipio as any).gestantes.length * 100).toFixed(1) + '%') : '0%',
         },
       }));
     } catch (error) {

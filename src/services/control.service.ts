@@ -113,7 +113,7 @@ export class ControlService {
 					peso: data.peso || null,
 					presion_sistolica: data.presion_sistolica || null,
 					presion_diastolica: data.presion_diastolica || null,
-				} as any // Temporal hasta corregir todos los errores de TypeScript
+				} as any
 			});
 
 			log.info(`ControlService: Control created with ID: ${newControl.id}`);
@@ -161,7 +161,7 @@ export class ControlService {
 					peso: data.peso !== undefined ? data.peso : existingControl.peso,
 					presion_sistolica: data.presion_sistolica !== undefined ? data.presion_sistolica : existingControl.presion_sistolica,
 					presion_diastolica: data.presion_diastolica !== undefined ? data.presion_diastolica : existingControl.presion_diastolica,
-				}
+				} as any
 			});
 
 			log.info(`ControlService: Control ${id} updated successfully`);
@@ -250,7 +250,7 @@ export class ControlService {
 
 			// Crear el control
 			const nuevoControl = await prisma.control_prenatal.create({
-				data: controlData as any // Temporal hasta corregir todos los errores de TypeScript
+				data: controlData as any
 			});
 
 			log.info(`ControlService: Control created with ID: ${nuevoControl.id}`);
@@ -427,7 +427,7 @@ export class ControlService {
 		const controles = await prisma.control_prenatal.findMany({
 			where: { gestante_id: gestanteId },
 			orderBy: { fecha_control: 'asc' }
-		}) as any;
+		});
 
 		log.info(`ControlService: Found ${controles.length} controles in history`);
 		return controles;
@@ -505,7 +505,7 @@ export class ControlService {
 
 		const control = await prisma.control_prenatal.findUnique({
 			where: { id: controlId }
-		}) as any;
+		});
 
 		if (!control) {
 			throw new Error(`Control ${controlId} not found`);

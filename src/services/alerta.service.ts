@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { PermissionService } from './permission.service';
 import { log } from '../config/logger';
 
@@ -141,8 +141,8 @@ export class AlertaService {
       // Agregar coordenadas si se proporcionan
       if (data.coordenadas_alerta && data.coordenadas_alerta.length === 2) {
         alertaData.coordenadas_alerta = {
-          lat: data.coordenadas_alerta[0],
-          lng: data.coordenadas_alerta[1]
+          type: "Point",
+          coordinates: [data.coordenadas_alerta[1], data.coordenadas_alerta[0]] // [longitud, latitud]
         };
       }
 
@@ -365,7 +365,7 @@ export class AlertaService {
           coordenadas_alerta: data.coordenadas ? {
             type: 'Point',
             coordinates: data.coordenadas
-          } : null,
+          } : Prisma.JsonNull,
           resuelta: false
         } as any,
         include: {
@@ -420,7 +420,7 @@ export class AlertaService {
           coordenadas_alerta: data.coordenadas ? {
             type: 'Point',
             coordinates: data.coordenadas
-          } : undefined
+          } : Prisma.JsonNull
         } as any,
         include: {
           gestante: {
@@ -632,7 +632,7 @@ export class AlertaService {
           coordenadas_alerta: {
             type: 'Point',
             coordinates: coordenadas
-          } as any,
+          },
           resuelta: false,
           fecha_resolucion: null,
         } as any
