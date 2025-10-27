@@ -13,6 +13,7 @@ const corsOptions = {
     // Lista de orígenes permitidos
     const allowedOrigins = [
       'http://localhost:3008',
+      'http://localhost:3009',
       'http://localhost:3000',
       'http://localhost:54112',
       'https://madres-digitales-frontend.vercel.app',
@@ -79,7 +80,7 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Madres Digitales API - Funcionando Correctamente',
-    version: '1.0.1',
+    version: '1.0.3',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
