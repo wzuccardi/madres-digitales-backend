@@ -6,7 +6,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const app = express();
-
+//probando para actualizar
 // CORS configuration - MEJORADO
 const corsOptions = {
   origin: function (origin, callback) {
@@ -23,7 +23,7 @@ const corsOptions = {
 
     // Permitir requests sin origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
-    
+
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -55,10 +55,10 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-XSS-Protection', '1; mode=block');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
+
   // CSP básico
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
-  
+
   next();
 });
 
@@ -68,7 +68,7 @@ app.use((req, res, next) => {
   const method = req.method;
   const url = req.url;
   const userAgent = req.get('User-Agent') || 'Unknown';
-  
+
   console.log(`📝 ${timestamp} - ${method} ${url} - ${userAgent.substring(0, 50)}`);
   next();
 });
@@ -614,7 +614,7 @@ app.get('/api/controles/vencidos', async (req, res) => {
 
     const controlesFormateados = controlesVencidos.map(control => {
       const diasVencido = Math.floor((hoy - new Date(control.fecha_control)) / (1000 * 60 * 60 * 24));
-      
+
       return {
         id: control.id,
         gestante: {
@@ -686,7 +686,7 @@ app.get('/api/controles/pendientes', async (req, res) => {
 
     const controlesFormateados = controlesPendientes.map(control => {
       const diasRestantes = Math.ceil((new Date(control.fecha_control) - hoy) / (1000 * 60 * 60 * 24));
-      
+
       return {
         id: control.id,
         gestante: {
@@ -945,15 +945,15 @@ app.delete('/api/controles/:id', async (req, res) => {
 // Contenido CRUD endpoint - MEJORADO
 app.get('/api/contenido-crud', async (req, res) => {
   try {
-    const { 
-      categoria, 
-      tipo, 
-      nivel, 
-      destacado, 
+    const {
+      categoria,
+      tipo,
+      nivel,
+      destacado,
       semana_gestacion,
       buscar,
-      page = 1, 
-      limit = 20 
+      page = 1,
+      limit = 20
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -962,12 +962,12 @@ app.get('/api/contenido-crud', async (req, res) => {
 
     // Construir filtros dinámicos
     const whereClause = { activo: true };
-    
+
     if (categoria) whereClause.categoria = categoria.toUpperCase();
     if (tipo) whereClause.tipo = tipo.toUpperCase();
     if (nivel) whereClause.nivel = nivel.toUpperCase();
     if (destacado !== undefined) whereClause.destacado = destacado === 'true';
-    
+
     // Filtro por semana de gestación
     if (semana_gestacion) {
       const semana = parseInt(semana_gestacion);
@@ -1229,10 +1229,10 @@ app.post('/api/auth/refresh', async (req, res) => {
 
     // En un entorno real, aquí verificarías el refresh token en la base de datos
     // Por ahora, mantenemos la funcionalidad demo pero mejorada
-    
+
     // Verificar si el refresh token existe en la base de datos (demo)
     const tokenExists = refreshToken.startsWith('refresh-');
-    
+
     if (!tokenExists) {
       return res.status(401).json({
         success: false,
@@ -1481,7 +1481,7 @@ const rateLimit = (maxRequests = 100, windowMs = 15 * 60 * 1000) => {
 
     const requests = rateLimitMap.get(clientIP);
     const recentRequests = requests.filter(timestamp => timestamp > windowStart);
-    
+
     if (recentRequests.length >= maxRequests) {
       return res.status(429).json({
         success: false,
@@ -1505,7 +1505,7 @@ app.use((err, req, res, next) => {
   const method = req.method;
   const url = req.url;
   const userAgent = req.get('User-Agent') || 'Unknown';
-  
+
   console.error(`❌ ${timestamp} - Error en ${method} ${url}:`, {
     message: err.message,
     stack: err.stack,
@@ -1545,8 +1545,8 @@ app.use((err, req, res, next) => {
   // Error genérico
   res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Error interno del servidor' 
+    error: process.env.NODE_ENV === 'production'
+      ? 'Error interno del servidor'
       : err.message,
     timestamp
   });
