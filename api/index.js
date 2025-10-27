@@ -1730,6 +1730,43 @@ app.get('/api/auth/verify', (req, res) => {
   }
 });
 
+// Municipios endpoint - NUEVO ENDPOINT
+app.get('/api/municipios', async (req, res) => {
+  try {
+    console.log('🏛️ Obteniendo municipios...');
+
+    const municipios = await prisma.municipios.findMany({
+      where: { activo: true },
+      orderBy: { nombre: 'asc' }
+    });
+
+    const municipiosFormateados = municipios.map(municipio => ({
+      id: municipio.id,
+      nombre: municipio.nombre,
+      departamento: municipio.departamento,
+      codigo_dane: municipio.codigo_dane,
+      latitud: municipio.latitud,
+      longitud: municipio.longitud,
+      poblacion: municipio.poblacion,
+      activo: municipio.activo,
+      fechaCreacion: municipio.fecha_creacion.toISOString().split('T')[0]
+    }));
+
+    console.log(`🏛️ Encontrados ${municipiosFormateados.length} municipios`);
+
+    res.json({
+      success: true,
+      data: municipiosFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo municipios:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo municipios: ' + error.message
+    });
+  }
+});
+
 // Basic reports endpoint
 app.get('/api/reportes', (req, res) => {
   res.json({
