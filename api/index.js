@@ -80,7 +80,7 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Madres Digitales API - Funcionando Correctamente',
-    version: '1.0.3',
+    version: '1.0.4',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
@@ -226,6 +226,196 @@ app.get('/api/dashboard/estadisticas', async (req, res) => {
   }
 });
 
+// Crear IPS - NUEVO ENDPOINT
+app.post('/api/ips', async (req, res) => {
+  try {
+    const {
+      nombre,
+      nit,
+      telefono,
+      direccion,
+      municipio_id,
+      nivel,
+      email,
+      latitud,
+      longitud,
+      activo = true
+    } = req.body;
+
+    console.log('🏥 Creando nueva IPS...');
+
+    // Validaciones básicas
+    if (!nombre || !direccion) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre y dirección son requeridos'
+      });
+    }
+
+    // Generar ID único
+    const id = `ips_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const nuevaIPS = await prisma.ips.create({
+      data: {
+        id,
+        nombre,
+        nit,
+        telefono,
+        direccion,
+        municipio_id,
+        nivel,
+        email,
+        latitud: latitud ? parseFloat(latitud) : null,
+        longitud: longitud ? parseFloat(longitud) : null,
+        activo
+      },
+      include: {
+        municipios: true,
+        medicos: {
+          where: { activo: true }
+        },
+        gestantes: {
+          where: { activa: true }
+        }
+      }
+    });
+
+    console.log('✅ IPS creada exitosamente:', nuevaIPS.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'IPS creada exitosamente',
+      data: {
+        id: nuevaIPS.id,
+        nombre: nuevaIPS.nombre,
+        nit: nuevaIPS.nit,
+        direccion: nuevaIPS.direccion,
+        telefono: nuevaIPS.telefono,
+        email: nuevaIPS.email,
+        nivel: nuevaIPS.nivel,
+        municipio: nuevaIPS.municipios?.nombre || null,
+        medicosAsignados: nuevaIPS.medicos.length,
+        gestantesAsignadas: nuevaIPS.gestantes.length,
+        coordenadas: {
+          latitud: nuevaIPS.latitud,
+          longitud: nuevaIPS.longitud
+        }
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creando IPS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error creando IPS: ' + error.message
+    });
+  }
+});
+
+// Actualizar IPS - NUEVO ENDPOINT
+app.put('/api/ips/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    console.log('🏥 Actualizando IPS:', id);
+
+    // Verificar que la IPS existe
+    const ipsExistente = await prisma.ips.findUnique({
+      where: { id }
+    });
+
+    if (!ipsExistente) {
+      return res.status(404).json({
+        success: false,
+        error: 'IPS no encontrada'
+      });
+    }
+
+    // Convertir coordenadas si vienen como string
+    if (updateData.latitud) updateData.latitud = parseFloat(updateData.latitud);
+    if (updateData.longitud) updateData.longitud = parseFloat(updateData.longitud);
+
+    const ipsActualizada = await prisma.ips.update({
+      where: { id },
+      data: updateData,
+      include: {
+        municipios: true,
+        medicos: {
+          where: { activo: true }
+        },
+        gestantes: {
+          where: { activa: true }
+        }
+      }
+    });
+
+    console.log('✅ IPS actualizada exitosamente:', id);
+
+    res.json({
+      success: true,
+      message: 'IPS actualizada exitosamente',
+      data: {
+        id: ipsActualizada.id,
+        nombre: ipsActualizada.nombre,
+        nit: ipsActualizada.nit,
+        direccion: ipsActualizada.direccion,
+        telefono: ipsActualizada.telefono,
+        email: ipsActualizada.email,
+        nivel: ipsActualizada.nivel,
+        municipio: ipsActualizada.municipios?.nombre || null,
+        medicosAsignados: ipsActualizada.medicos.length,
+        gestantesAsignadas: ipsActualizada.gestantes.length
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error actualizando IPS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error actualizando IPS: ' + error.message
+    });
+  }
+});
+
+// Eliminar IPS - NUEVO ENDPOINT
+app.delete('/api/ips/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log('🗑️ Eliminando IPS:', id);
+
+    // Verificar que la IPS existe
+    const ipsExistente = await prisma.ips.findUnique({
+      where: { id }
+    });
+
+    if (!ipsExistente) {
+      return res.status(404).json({
+        success: false,
+        error: 'IPS no encontrada'
+      });
+    }
+
+    // Soft delete - marcar como inactiva
+    await prisma.ips.update({
+      where: { id },
+      data: { activo: false }
+    });
+
+    console.log('✅ IPS eliminada exitosamente:', id);
+
+    res.json({
+      success: true,
+      message: 'IPS eliminada exitosamente'
+    });
+  } catch (error) {
+    console.error('❌ Error eliminando IPS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error eliminando IPS: ' + error.message
+    });
+  }
+});
+
 // IPS endpoints - DATOS REALES
 app.get('/api/ips', async (req, res) => {
   try {
@@ -342,6 +532,185 @@ app.get('/api/gestantes', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error obteniendo gestantes: ' + error.message
+    });
+  }
+});
+
+// Crear médico - NUEVO ENDPOINT
+app.post('/api/medicos', async (req, res) => {
+  try {
+    const {
+      nombre,
+      documento,
+      tipo_documento = 'cedula',
+      telefono,
+      especialidad,
+      email,
+      registro_medico,
+      ips_id,
+      municipio_id,
+      activo = true
+    } = req.body;
+
+    console.log('👨‍⚕️ Creando nuevo médico...');
+
+    // Validaciones básicas
+    if (!nombre || !documento) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre y documento son requeridos'
+      });
+    }
+
+    // Generar ID único
+    const id = `med_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const nuevoMedico = await prisma.medicos.create({
+      data: {
+        id,
+        nombre,
+        documento,
+        tipo_documento,
+        telefono,
+        especialidad,
+        email,
+        registro_medico,
+        ips_id,
+        municipio_id,
+        activo
+      },
+      include: {
+        ips: true,
+        municipios: true,
+        gestantes: {
+          where: { activa: true }
+        }
+      }
+    });
+
+    console.log('✅ Médico creado exitosamente:', nuevoMedico.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Médico creado exitosamente',
+      data: {
+        id: nuevoMedico.id,
+        nombre: nuevoMedico.nombre,
+        documento: nuevoMedico.documento,
+        telefono: nuevoMedico.telefono,
+        especialidad: nuevoMedico.especialidad,
+        email: nuevoMedico.email,
+        registroMedico: nuevoMedico.registro_medico,
+        ips: nuevoMedico.ips?.nombre || null,
+        municipio: nuevoMedico.municipios?.nombre || null,
+        gestantesAsignadas: nuevoMedico.gestantes.length,
+        fechaCreacion: nuevoMedico.fecha_creacion.toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creando médico:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error creando médico: ' + error.message
+    });
+  }
+});
+
+// Actualizar médico - NUEVO ENDPOINT
+app.put('/api/medicos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    console.log('👨‍⚕️ Actualizando médico:', id);
+
+    // Verificar que el médico existe
+    const medicoExistente = await prisma.medicos.findUnique({
+      where: { id }
+    });
+
+    if (!medicoExistente) {
+      return res.status(404).json({
+        success: false,
+        error: 'Médico no encontrado'
+      });
+    }
+
+    const medicoActualizado = await prisma.medicos.update({
+      where: { id },
+      data: updateData,
+      include: {
+        ips: true,
+        municipios: true,
+        gestantes: {
+          where: { activa: true }
+        }
+      }
+    });
+
+    console.log('✅ Médico actualizado exitosamente:', id);
+
+    res.json({
+      success: true,
+      message: 'Médico actualizado exitosamente',
+      data: {
+        id: medicoActualizado.id,
+        nombre: medicoActualizado.nombre,
+        documento: medicoActualizado.documento,
+        telefono: medicoActualizado.telefono,
+        especialidad: medicoActualizado.especialidad,
+        email: medicoActualizado.email,
+        registroMedico: medicoActualizado.registro_medico,
+        ips: medicoActualizado.ips?.nombre || null,
+        municipio: medicoActualizado.municipios?.nombre || null,
+        gestantesAsignadas: medicoActualizado.gestantes.length
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error actualizando médico:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error actualizando médico: ' + error.message
+    });
+  }
+});
+
+// Eliminar médico - NUEVO ENDPOINT
+app.delete('/api/medicos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    console.log('🗑️ Eliminando médico:', id);
+
+    // Verificar que el médico existe
+    const medicoExistente = await prisma.medicos.findUnique({
+      where: { id }
+    });
+
+    if (!medicoExistente) {
+      return res.status(404).json({
+        success: false,
+        error: 'Médico no encontrado'
+      });
+    }
+
+    // Soft delete - marcar como inactivo
+    await prisma.medicos.update({
+      where: { id },
+      data: { activo: false }
+    });
+
+    console.log('✅ Médico eliminado exitosamente:', id);
+
+    res.json({
+      success: true,
+      message: 'Médico eliminado exitosamente'
+    });
+  } catch (error) {
+    console.error('❌ Error eliminando médico:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error eliminando médico: ' + error.message
     });
   }
 });
