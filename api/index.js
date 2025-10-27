@@ -436,7 +436,7 @@ app.get('/api/ips', async (req, res) => {
       }
     });
 
-    const ipsFormateadas = ips.map(ipsItem => ({
+    const ipsFormateadas = (ips || []).map(ipsItem => ({
       id: ipsItem.id,
       nombre: ipsItem.nombre,
       nit: ipsItem.nit,
@@ -445,8 +445,8 @@ app.get('/api/ips', async (req, res) => {
       email: ipsItem.email,
       nivel: ipsItem.nivel,
       municipio: ipsItem.municipios?.nombre || null,
-      medicosAsignados: ipsItem.medicos.length,
-      gestantesAsignadas: ipsItem.gestantes.length,
+      medicosAsignados: ipsItem.medicos?.length || 0,
+      gestantesAsignadas: ipsItem.gestantes?.length || 0,
       coordenadas: {
         latitud: ipsItem.latitud,
         longitud: ipsItem.longitud
@@ -457,13 +457,20 @@ app.get('/api/ips', async (req, res) => {
 
     res.json({
       success: true,
-      data: ipsFormateadas
+      data: {
+        ips: ipsFormateadas,
+        total: ipsFormateadas.length
+      }
     });
   } catch (error) {
     console.error('❌ Error obteniendo IPS:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo IPS: ' + error.message
+      error: 'Error obteniendo IPS: ' + error.message,
+      data: {
+        ips: [],
+        total: 0
+      }
     });
   }
 });
@@ -486,7 +493,7 @@ app.get('/api/gestantes', async (req, res) => {
       }
     });
 
-    const gestantesFormateadas = gestantes.map(gestante => {
+    const gestantesFormateadas = (gestantes || []).map(gestante => {
       // Calcular edad
       const edad = gestante.fecha_nacimiento
         ? Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000))
@@ -527,13 +534,20 @@ app.get('/api/gestantes', async (req, res) => {
 
     res.json({
       success: true,
-      data: gestantesFormateadas
+      data: {
+        gestantes: gestantesFormateadas,
+        total: gestantesFormateadas.length
+      }
     });
   } catch (error) {
     console.error('❌ Error obteniendo gestantes:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo gestantes: ' + error.message
+      error: 'Error obteniendo gestantes: ' + error.message,
+      data: {
+        gestantes: [],
+        total: 0
+      }
     });
   }
 });
@@ -733,7 +747,7 @@ app.get('/api/medicos', async (req, res) => {
       }
     });
 
-    const medicosFormateados = medicos.map(medico => ({
+    const medicosFormateados = (medicos || []).map(medico => ({
       id: medico.id,
       nombre: medico.nombre,
       documento: medico.documento,
@@ -743,7 +757,7 @@ app.get('/api/medicos', async (req, res) => {
       registroMedico: medico.registro_medico,
       ips: medico.ips?.nombre || null,
       municipio: medico.municipios?.nombre || null,
-      gestantesAsignadas: medico.gestantes.length,
+      gestantesAsignadas: medico.gestantes?.length || 0,
       fechaCreacion: medico.fecha_creacion.toISOString().split('T')[0]
     }));
 
@@ -751,13 +765,20 @@ app.get('/api/medicos', async (req, res) => {
 
     res.json({
       success: true,
-      data: medicosFormateados
+      data: {
+        medicos: medicosFormateados,
+        total: medicosFormateados.length
+      }
     });
   } catch (error) {
     console.error('❌ Error obteniendo médicos:', error);
     res.status(500).json({
       success: false,
-      error: 'Error obteniendo médicos: ' + error.message
+      error: 'Error obteniendo médicos: ' + error.message,
+      data: {
+        medicos: [],
+        total: 0
+      }
     });
   }
 });
