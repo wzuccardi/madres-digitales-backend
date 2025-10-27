@@ -18,7 +18,9 @@ const corsOptions = {
       'http://localhost:54112',
       'https://madres-digitales-frontend.vercel.app',
       'https://madres-digitales.vercel.app',
-      'https://madres-digitales-backend.vercel.app'
+      'https://madres-digitales-backend.vercel.app',
+      // Agregar el nuevo dominio de frontend de Vercel
+      'https://madres-digitales-frontend-1bw6x2ir0.vercel.app'
     ];
 
     // Permitir requests sin origin (mobile apps, Postman, etc.)
@@ -80,7 +82,7 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Madres Digitales API - Funcionando Correctamente',
-    version: '1.0.4',
+    version: '1.0.5',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
