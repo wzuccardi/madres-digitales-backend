@@ -3,7 +3,6 @@ node_modules
 .env.development
 .env.test
 src/
-prisma/
 uploads/
 dist/
 *.log
@@ -19,3 +18,5 @@ package.json.backup
 package.vercel.json
 tsconfig.json
 tsconfig.production.json
+# Mantener prisma/ para que Vercel pueda generar el cliente
+# prisma/
