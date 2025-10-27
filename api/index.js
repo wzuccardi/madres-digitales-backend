@@ -79,7 +79,7 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'Madres Digitales API - Funcionando Correctamente',
-    version: '1.0.0',
+    version: '1.0.1',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'production'
   });
