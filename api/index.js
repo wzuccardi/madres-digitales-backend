@@ -21,7 +21,8 @@ const corsOptions = {
       'https://madres-digitales-backend.vercel.app',
       // Dominios de frontend de Vercel
       'https://madres-digitales-frontend-1bw6x2ir0.vercel.app',
-      'https://madresdigitalesflutter-ncxd8av5c-maildipablo22-4886s-projects.vercel.app'
+      'https://madresdigitalesflutter-ncxd8av5c-maildipablo22-4886s-projects.vercel.app',
+      'https://madresdigitalesflutternew.vercel.app'
     ];
 
     // Permitir requests sin origin (mobile apps, Postman, etc.)
