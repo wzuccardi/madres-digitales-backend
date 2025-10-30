@@ -448,7 +448,8 @@ export const getAlertasActivas = async (req: AuthenticatedRequest, res: Response
 };
 
 /**
- * Notificar emergencia (crear alerta crítica)
+ * Notificar emergencia (crear alerta crítica SOS)
+ * Captura ubicación GPS, datos de madrina y gestante
  */
 export const notificarEmergencia = async (req: AuthenticatedRequest, res: Response) => {
 	try {
@@ -461,34 +462,95 @@ export const notificarEmergencia = async (req: AuthenticatedRequest, res: Respon
 			});
 		}
 
-		const { gestante_id, mensaje, coordenadas_alerta } = req.body;
+		const {
+			gestante_id,
+			mensaje,
+			coordenadas_alerta,
+			latitude,
+			longitude,
+			accuracy
+		} = req.body;
 
-		if (!gestante_id || !mensaje) {
+		if (!gestante_id) {
 			return res.status(400).json({
 				success: false,
-				error: 'Los campos gestante_id y mensaje son requeridos'
+				error: 'El campo gestante_id es requerido'
 			});
 		}
 
-		console.log(`🚨 Controller: Notificando emergencia para gestante ${gestante_id}`);
+		console.log(`🚨 Controller: Notificando emergencia SOS para gestante ${gestante_id}`);
+
+		// Obtener datos de gestante y madrina
+		const gestante = await prisma.gestantes.findUnique({
+			where: { id: gestante_id },
+			include: {
+				madrina: {
+					select: {
+						id: true,
+						nombre: true,
+						telefono: true,
+						rol: true
+					}
+				}
+			}
+		});
+
+		if (!gestante) {
+			return res.status(404).json({
+				success: false,
+				error: 'Gestante no encontrada'
+			});
+		}
+
+		// Validar que solo madrinas pueden activar SOS
+		if (gestante.madrina?.id !== userId && req.user?.rol !== 'SUPER_ADMIN' && req.user?.rol !== 'ADMIN') {
+			return res.status(403).json({
+				success: false,
+				error: 'No tiene permisos para activar SOS para esta gestante'
+			});
+		}
 
 		const alertaEmergencia = {
 			gestante_id,
-			tipo_alerta: 'emergencia_obstetrica',
-			nivel_prioridad: 'critica',
-			mensaje,
-			coordenadas_alerta,
+			tipo_alerta: 'SOS',
+			nivel_prioridad: 'CRITICA',
+			mensaje: mensaje || 'Alerta SOS de emergencia activada',
+			coordenadas_alerta: coordenadas_alerta || (latitude && longitude ? {
+				type: 'Point',
+				coordinates: [longitude, latitude]
+			} : null),
 			es_automatica: false,
-			score_riesgo: 100 // Emergencias tienen score máximo
+			score_riesgo: 100, // Emergencias tienen score máximo
+
+			// Campos de ubicación GPS
+			ubicacion_lat: latitude || null,
+			ubicacion_lng: longitude || null,
+			ubicacion_precision: accuracy || null,
+
+			// Datos de Madrina
+			nombre_madrina: gestante.madrina?.nombre || null,
+			telefono_madrina: gestante.madrina?.telefono || null,
+
+			// Datos de Gestante
+			nombre_gestante: gestante.nombre || null,
+			telefono_gestante: gestante.telefono || null,
+			direccion_gestante: gestante.direccion || null,
+			municipio: gestante.municipio || null,
+
+			madrina_id: gestante.madrina?.id || null
 		};
 
 		const nuevaAlerta = await alertaService.createAlerta(alertaEmergencia, userId);
 
-		console.log(`✅ Controller: Emergencia notificada con ID ${nuevaAlerta.id}`);
+		console.log(`✅ Controller: Emergencia SOS notificada con ID ${nuevaAlerta.id}`);
+		console.log(`📍 Ubicación: ${latitude}, ${longitude} (precisión: ${accuracy}m)`);
+		console.log(`👩 Madrina: ${gestante.madrina?.nombre}`);
+		console.log(`🤰 Gestante: ${gestante.nombre}`);
+
 		res.status(201).json({
 			success: true,
 			data: nuevaAlerta,
-			message: 'Emergencia notificada exitosamente'
+			message: 'Emergencia SOS notificada exitosamente'
 		});
 	} catch (error) {
 		console.error('❌ Controller: Error notificando emergencia:', error);

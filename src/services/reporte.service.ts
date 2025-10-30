@@ -1,11 +1,29 @@
 // Servicio para reportes y estadísticas
 // Todos los datos provienen de la base de datos real
 import prisma from '../config/database';
+import cacheService from './cache.service';
+
+// Interfaz para filtros de reportes
+export interface FiltrosReporte {
+    municipio_id?: string;
+    riesgo?: 'alto' | 'bajo';
+    fecha_inicio?: Date;
+    fecha_fin?: Date;
+    estado?: string;
+    madrina_id?: string;
+}
 
 export class ReporteService {
     // Obtener resumen general del sistema
     async getResumenGeneral() {
         console.log('📊 ReporteService: Fetching resumen general...');
+
+        // Verificar caché
+        const cacheKey = 'reporte:resumen-general';
+        const cached = cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
 
         // Obtener totales
         const totalGestantes = await prisma.gestante.count();
@@ -54,15 +72,43 @@ export class ReporteService {
             fecha_generacion: new Date()
         };
 
+        // Guardar en caché (30 minutos)
+        cacheService.set(cacheKey, resumen, 30);
+
         console.log(`📊 ReporteService: Resumen generado:`, resumen);
         return resumen;
     }
 
-    // Obtener estadísticas de gestantes por municipio
-    async getEstadisticasGestantes() {
-        console.log('📊 ReporteService: Fetching estadísticas de gestantes...');
+    // Obtener estadísticas de gestantes por municipio con filtros
+    async getEstadisticasGestantes(filtros?: FiltrosReporte) {
+        console.log('📊 ReporteService: Fetching estadísticas de gestantes...', filtros);
+
+        // Generar clave de caché con filtros
+        const cacheKey = `reporte:estadisticas-gestantes:${JSON.stringify(filtros || {})}`;
+        const cached = cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
+
+        // Construir where clause con filtros
+        let where: any = {};
+
+        if (filtros?.municipio_id) {
+            where.municipio_id = filtros.municipio_id;
+        }
+
+        if (filtros?.riesgo === 'alto') {
+            where.riesgo_alto = true;
+        } else if (filtros?.riesgo === 'bajo') {
+            where.riesgo_alto = false;
+        }
+
+        if (filtros?.madrina_id) {
+            where.madrina_id = filtros.madrina_id;
+        }
 
         const gestantes = await prisma.gestante.findMany({
+            where,
             select: {
                 id: true,
                 municipio_id: true,
@@ -89,6 +135,9 @@ export class ReporteService {
             };
         }).filter(stat => stat.total_gestantes > 0); // Solo municipios con gestantes
 
+        // Guardar en caché (30 minutos)
+        cacheService.set(cacheKey, estadisticasPorMunicipio, 30);
+
         console.log(`📊 ReporteService: ${estadisticasPorMunicipio.length} municipios con gestantes`);
         return estadisticasPorMunicipio;
     }
@@ -96,6 +145,13 @@ export class ReporteService {
     // Obtener estadísticas de controles por período
     async getEstadisticasControles(fechaInicio?: Date, fechaFin?: Date) {
         console.log('📊 ReporteService: Fetching estadísticas de controles...');
+
+        // Generar clave de caché
+        const cacheKey = `reporte:estadisticas-controles:${fechaInicio?.toISOString() || 'default'}:${fechaFin?.toISOString() || 'default'}`;
+        const cached = cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
 
         // Si no se especifican fechas, usar últimos 6 meses
         if (!fechaInicio) {
@@ -135,18 +191,30 @@ export class ReporteService {
             total_controles: cantidad
         }));
 
-        console.log(`📊 ReporteService: ${evolucion.length} períodos con controles`);
-        return {
+        const resultado = {
             fecha_inicio: fechaInicio,
             fecha_fin: fechaFin,
             total_controles: controles.length,
             evolucion
         };
+
+        // Guardar en caché (30 minutos)
+        cacheService.set(cacheKey, resultado, 30);
+
+        console.log(`📊 ReporteService: ${evolucion.length} períodos con controles`);
+        return resultado;
     }
 
     // Obtener estadísticas de alertas
     async getEstadisticasAlertas() {
         console.log('📊 ReporteService: Fetching estadísticas de alertas...');
+
+        // Verificar caché
+        const cacheKey = 'reporte:estadisticas-alertas';
+        const cached = cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
 
         const alertas = await prisma.alerta.findMany({
             select: {
@@ -185,19 +253,31 @@ export class ReporteService {
         const activas = alertas.filter(a => !a.resuelta).length;
         const resueltas = alertas.filter(a => a.resuelta).length;
 
-        console.log(`📊 ReporteService: ${alertas.length} alertas analizadas`);
-        return {
+        const resultado = {
             total_alertas: alertas.length,
             alertas_activas: activas,
             alertas_resueltas: resueltas,
             distribucion_por_tipo: distribucionPorTipo,
             distribucion_por_prioridad: distribucionPorPrioridad
         };
+
+        // Guardar en caché (30 minutos)
+        cacheService.set(cacheKey, resultado, 30);
+
+        console.log(`📊 ReporteService: ${alertas.length} alertas analizadas`);
+        return resultado;
     }
 
     // Obtener estadísticas de riesgo
     async getEstadisticasRiesgo() {
         console.log('📊 ReporteService: Fetching estadísticas de riesgo...');
+
+        // Verificar caché
+        const cacheKey = 'reporte:estadisticas-riesgo';
+        const cached = cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
 
         const totalGestantes = await prisma.gestante.count();
         const gestantesAltoRiesgo = await prisma.gestante.count({
@@ -218,16 +298,28 @@ export class ReporteService {
             }
         ];
 
-        console.log(`📊 ReporteService: Distribución de riesgo calculada`);
-        return {
+        const resultado = {
             total_gestantes: totalGestantes,
             distribucion
         };
+
+        // Guardar en caché (30 minutos)
+        cacheService.set(cacheKey, resultado, 30);
+
+        console.log(`📊 ReporteService: Distribución de riesgo calculada`);
+        return resultado;
     }
 
     // Obtener tendencias temporales
     async getTendencias(meses: number = 6) {
         console.log(`📊 ReporteService: Fetching tendencias (últimos ${meses} meses)...`);
+
+        // Verificar caché
+        const cacheKey = `reporte:tendencias:${meses}`;
+        const cached = cacheService.get(cacheKey);
+        if (cached) {
+            return cached;
+        }
 
         const fechaInicio = new Date();
         fechaInicio.setMonth(fechaInicio.getMonth() - meses);
@@ -282,6 +374,9 @@ export class ReporteService {
                 total_alertas: datos.alertas
             }))
             .sort((a, b) => a.periodo.localeCompare(b.periodo));
+
+        // Guardar en caché (30 minutos)
+        cacheService.set(cacheKey, tendencias, 30);
 
         console.log(`📊 ReporteService: ${tendencias.length} períodos con tendencias`);
         return tendencias;

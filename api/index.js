@@ -19,12 +19,26 @@ const corsOptions = {
       'https://madres-digitales-frontend.vercel.app',
       'https://madres-digitales.vercel.app',
       'https://madres-digitales-backend.vercel.app',
-      // Agregar el nuevo dominio de frontend de Vercel
-      'https://madres-digitales-frontend-1bw6x2ir0.vercel.app'
+      // Dominios de frontend de Vercel
+      'https://madres-digitales-frontend-1bw6x2ir0.vercel.app',
+      'https://madresdigitalesflutter-ncxd8av5c-maildipablo22-4886s-projects.vercel.app'
     ];
 
     // Permitir requests sin origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
+
+    // Permitir cualquier localhost (para Flutter con puertos dinámicos)
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+
+    // Permitir cualquier dominio de Vercel del proyecto madres-digitales
+    if (origin && (
+      (origin.includes('madres-digitales') && origin.includes('.vercel.app')) ||
+      (origin.includes('madresdigitales') && origin.includes('.vercel.app'))
+    )) {
+      return callback(null, true);
+    }
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -50,6 +64,18 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// UTF-8 Encoding Configuration - IMPORTANTE PARA ESPAÑOL
+app.use(express.json({
+  charset: 'utf-8',
+  limit: '50mb'
+}));
+
+app.use(express.urlencoded({
+  extended: true,
+  charset: 'utf-8',
+  limit: '50mb'
+}));
+
 // Security headers middleware - NUEVO
 app.use((req, res, next) => {
   // Seguridad básica
@@ -60,6 +86,9 @@ app.use((req, res, next) => {
 
   // CSP básico
   res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'");
+
+  // UTF-8 Encoding Header
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
   next();
 });
@@ -74,8 +103,6 @@ app.use((req, res, next) => {
   console.log(`📝 ${timestamp} - ${method} ${url} - ${userAgent.substring(0, 50)}`);
   next();
 });
-
-app.use(express.json());
 
 // Health check
 app.get('/', (req, res) => {
@@ -493,52 +520,103 @@ app.get('/api/gestantes', async (req, res) => {
       }
     });
 
-    const gestantesFormateadas = (gestantes || []).map(gestante => {
-      // Calcular edad
-      const edad = gestante.fecha_nacimiento
-        ? Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000))
-        : null;
+    const gestantesFormateadas = (gestantes || []).map((gestante, index) => {
+      try {
+        // Calcular edad
+        const edad = gestante.fecha_nacimiento
+          ? Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000))
+          : null;
 
-      // Calcular semanas de gestación
-      let semanas = null;
-      if (gestante.fecha_ultima_menstruacion) {
-        const diasGestacion = Math.floor((new Date() - new Date(gestante.fecha_ultima_menstruacion)) / (24 * 60 * 60 * 1000));
-        semanas = Math.floor(diasGestacion / 7);
+        // Calcular semanas de gestación
+        let semanas = null;
+        if (gestante.fecha_ultima_menstruacion) {
+          const diasGestacion = Math.floor((new Date() - new Date(gestante.fecha_ultima_menstruacion)) / (24 * 60 * 60 * 1000));
+          semanas = Math.floor(diasGestacion / 7);
+        }
+
+        // Último control
+        const ultimoControl = gestante.control_prenatal.length > 0
+          ? gestante.control_prenatal[0].fecha_control.toISOString().split('T')[0]
+          : null;
+
+        const gestanteFormateada = {
+          id: gestante.id,
+          nombre: gestante.nombre,
+          documento: gestante.documento,
+          edad,
+          semanas,
+          telefono: gestante.telefono,
+          direccion: gestante.direccion,
+          eps: gestante.eps,
+          regimen_salud: gestante.regimen_salud,
+          riesgo_alto: gestante.riesgo_alto,
+          municipio: gestante.municipios?.nombre || null,
+          ips_asignada: gestante.ips_asignada?.nombre || null,
+          medico_tratante: gestante.medico_tratante?.nombre || null,
+          ultimo_control: ultimoControl,
+          fecha_creacion: gestante.fecha_creacion.toISOString().split('T')[0],
+          // Campos adicionales requeridos por Flutter
+          municipio_id: gestante.municipio_id,
+          madrina_id: gestante.madrina_id,
+          medico_tratante_id: gestante.medico_tratante_id,
+          ips_asignada_id: gestante.ips_asignada_id,
+          fecha_nacimiento: gestante.fecha_nacimiento.toISOString().split('T')[0],
+          fecha_ultima_menstruacion: gestante.fecha_ultima_menstruacion ? gestante.fecha_ultima_menstruacion.toISOString().split('T')[0] : null,
+          fecha_probable_parto: gestante.fecha_probable_parto ? gestante.fecha_probable_parto.toISOString().split('T')[0] : null,
+          activa: gestante.activa
+        };
+
+        console.log(`🤰 [${index}] Gestante formateada:`, {
+          id: gestanteFormateada.id,
+          nombre: gestanteFormateada.nombre,
+          tipos: {
+            nombre: typeof gestanteFormateada.nombre,
+            documento: typeof gestanteFormateada.documento,
+            edad: typeof gestanteFormateada.edad,
+            semanas: typeof gestanteFormateada.semanas,
+            regimen_salud: typeof gestanteFormateada.regimen_salud,
+            riesgo_alto: typeof gestanteFormateada.riesgo_alto
+          }
+        });
+
+        return gestanteFormateada;
+      } catch (error) {
+        console.error(`❌ Error formateando gestante ${index}:`, error);
+        throw error;
       }
-
-      // Último control
-      const ultimoControl = gestante.control_prenatal.length > 0
-        ? gestante.control_prenatal[0].fecha_control.toISOString().split('T')[0]
-        : null;
-
-      return {
-        id: gestante.id,
-        nombre: gestante.nombre,
-        documento: gestante.documento,
-        edad,
-        semanas,
-        telefono: gestante.telefono,
-        direccion: gestante.direccion,
-        eps: gestante.eps,
-        regimenSalud: gestante.regimen_salud,
-        riesgoAlto: gestante.riesgo_alto,
-        municipio: gestante.municipios?.nombre || null,
-        ipsAsignada: gestante.ips_asignada?.nombre || null,
-        medicoTratante: gestante.medico_tratante?.nombre || null,
-        ultimoControl,
-        fechaCreacion: gestante.fecha_creacion.toISOString().split('T')[0]
-      };
     });
 
     console.log(`🤰 Encontradas ${gestantesFormateadas.length} gestantes activas`);
+    console.log(`🤰 Tipo de gestantesFormateadas:`, typeof gestantesFormateadas, Array.isArray(gestantesFormateadas));
 
-    res.json({
+    const respuesta = {
       success: true,
       data: {
         gestantes: gestantesFormateadas,
         total: gestantesFormateadas.length
       }
+    };
+
+    console.log(`🤰 RESPUESTA FINAL:`, {
+      success: respuesta.success,
+      dataType: typeof respuesta.data,
+      gestantesType: typeof respuesta.data.gestantes,
+      gestantesIsArray: Array.isArray(respuesta.data.gestantes),
+      gestantesLength: respuesta.data.gestantes.length,
+      total: respuesta.data.total,
+      primerGestante: respuesta.data.gestantes[0] ? {
+        id: respuesta.data.gestantes[0].id,
+        nombre: respuesta.data.gestantes[0].nombre,
+        tipos: {
+          nombre: typeof respuesta.data.gestantes[0].nombre,
+          documento: typeof respuesta.data.gestantes[0].documento,
+          edad: typeof respuesta.data.gestantes[0].edad,
+          semanas: typeof respuesta.data.gestantes[0].semanas
+        }
+      } : null
     });
+
+    res.json(respuesta);
   } catch (error) {
     console.error('❌ Error obteniendo gestantes:', error);
     res.status(500).json({
@@ -921,38 +999,69 @@ app.get('/api/controles', async (req, res) => {
       prisma.control_prenatal.count({ where: whereClause })
     ]);
 
-    const controlesFormateados = controles.map(control => ({
-      id: control.id,
-      gestante: {
-        nombre: control.gestante?.nombre || 'Sin asignar',
-        documento: control.gestante?.documento || 'N/A',
-        telefono: control.gestante?.telefono || null
-      },
-      medico: control.medico ? {
-        nombre: control.medico.nombre,
-        especialidad: control.medico.especialidad,
-        telefono: control.medico.telefono
-      } : null,
-      fechaControl: control.fecha_control.toISOString().split('T')[0],
-      semanasGestacion: control.semanas_gestacion,
-      peso: control.peso,
-      alturaUterina: control.altura_uterina,
-      presionSistolica: control.presion_sistolica,
-      presionDiastolica: control.presion_diastolica,
-      frecuenciaCardiaca: control.frecuencia_cardiaca,
-      temperatura: control.temperatura,
-      movimientosFetales: control.movimientos_fetales,
-      edemas: control.edemas,
-      realizado: control.realizado,
-      recomendaciones: control.recomendaciones,
-      observaciones: control.observaciones,
-      proximoControl: control.proximo_control ? control.proximo_control.toISOString().split('T')[0] : null,
-      fechaCreacion: control.fecha_creacion.toISOString().split('T')[0]
-    }));
+    const controlesFormateados = controles.map((control, index) => {
+      try {
+        const controlFormateado = {
+          id: control.id,
+          gestante_id: control.gestante_id,
+          medico_id: control.medico_id,
+          gestante: {
+            nombre: control.gestante?.nombre || 'Sin asignar',
+            documento: control.gestante?.documento || 'N/A',
+            telefono: control.gestante?.telefono || null
+          },
+          medico: control.medico ? {
+            nombre: control.medico.nombre,
+            especialidad: control.medico.especialidad,
+            telefono: control.medico.telefono
+          } : null,
+          fecha_control: control.fecha_control.toISOString().split('T')[0],
+          semanas_gestacion: control.semanas_gestacion ? parseInt(control.semanas_gestacion) : null,
+          peso: control.peso ? parseFloat(control.peso) : null,
+          altura_uterina: control.altura_uterina ? parseFloat(control.altura_uterina) : null,
+          presion_sistolica: control.presion_sistolica ? parseInt(control.presion_sistolica) : null,
+          presion_diastolica: control.presion_diastolica ? parseInt(control.presion_diastolica) : null,
+          frecuencia_cardiaca: control.frecuencia_cardiaca ? parseInt(control.frecuencia_cardiaca) : null,
+          temperatura: control.temperatura ? parseFloat(control.temperatura) : null,
+          movimientos_fetales: control.movimientos_fetales,
+          edemas: control.edemas,
+          realizado: control.realizado,
+          recomendaciones: control.recomendaciones,
+          observaciones: control.observaciones,
+          proximo_control: control.proximo_control ? control.proximo_control.toISOString().split('T')[0] : null,
+          fecha_creacion: control.fecha_creacion.toISOString().split('T')[0],
+          fecha_actualizacion: control.fecha_actualizacion.toISOString().split('T')[0]
+        };
+
+        console.log(`🩺 [${index}] Control formateado:`, {
+          id: controlFormateado.id,
+          gestante_id: controlFormateado.gestante_id,
+          tipos: {
+            gestante_id: typeof controlFormateado.gestante_id,
+            medico_id: typeof controlFormateado.medico_id,
+            semanas_gestacion: typeof controlFormateado.semanas_gestacion,
+            peso: typeof controlFormateado.peso,
+            temperatura: typeof controlFormateado.temperatura,
+            presion_sistolica: typeof controlFormateado.presion_sistolica
+          },
+          valores: {
+            semanas_gestacion: controlFormateado.semanas_gestacion,
+            peso: controlFormateado.peso,
+            temperatura: controlFormateado.temperatura
+          }
+        });
+
+        return controlFormateado;
+      } catch (error) {
+        console.error(`❌ Error formateando control ${index}:`, error);
+        throw error;
+      }
+    });
 
     console.log(`🩺 Encontrados ${controlesFormateados.length} controles de ${totalControles} total`);
+    console.log(`🩺 Tipo de controlesFormateados:`, typeof controlesFormateados, Array.isArray(controlesFormateados));
 
-    res.json({
+    const respuestaControles = {
       success: true,
       data: {
         controles: controlesFormateados,
@@ -963,7 +1072,34 @@ app.get('/api/controles', async (req, res) => {
           totalPages: Math.ceil(totalControles / limit)
         }
       }
+    };
+
+    console.log(`🩺 RESPUESTA FINAL CONTROLES:`, {
+      success: respuestaControles.success,
+      dataType: typeof respuestaControles.data,
+      controlesType: typeof respuestaControles.data.controles,
+      controlesIsArray: Array.isArray(respuestaControles.data.controles),
+      controlesLength: respuestaControles.data.controles.length,
+      pagination: respuestaControles.data.pagination,
+      primerControl: respuestaControles.data.controles[0] ? {
+        id: respuestaControles.data.controles[0].id,
+        gestante_id: respuestaControles.data.controles[0].gestante_id,
+        tipos: {
+          gestante_id: typeof respuestaControles.data.controles[0].gestante_id,
+          medico_id: typeof respuestaControles.data.controles[0].medico_id,
+          semanas_gestacion: typeof respuestaControles.data.controles[0].semanas_gestacion,
+          peso: typeof respuestaControles.data.controles[0].peso,
+          temperatura: typeof respuestaControles.data.controles[0].temperatura
+        },
+        valores: {
+          semanas_gestacion: respuestaControles.data.controles[0].semanas_gestacion,
+          peso: respuestaControles.data.controles[0].peso,
+          temperatura: respuestaControles.data.controles[0].temperatura
+        }
+      } : null
     });
+
+    res.json(respuestaControles);
   } catch (error) {
     console.error('❌ Error obteniendo controles:', error);
     res.status(500).json({
@@ -1980,6 +2116,406 @@ app.use((err, req, res, next) => {
     timestamp
   });
 });
+
+// ==================== ENDPOINTS DE REPORTES ====================
+
+// Resumen general - NUEVO ENDPOINT
+app.get('/api/reportes/resumen-general', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo resumen general del sistema...');
+
+    const [
+      totalGestantes,
+      gestantesActivas,
+      totalControles,
+      controlesRealizados,
+      totalAlertas,
+      alertasActivas,
+      totalMedicos,
+      medicosActivos,
+      totalIPS,
+      ipsActivas
+    ] = await Promise.all([
+      prisma.gestantes.count(),
+      prisma.gestantes.count({ where: { activa: true } }),
+      prisma.control_prenatal.count(),
+      prisma.control_prenatal.count({ where: { realizado: true } }),
+      prisma.alertas.count(),
+      prisma.alertas.count({ where: { resuelta: false } }),
+      prisma.medicos.count(),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count(),
+      prisma.ips.count({ where: { activo: true } })
+    ]);
+
+    const resumen = {
+      gestantes: {
+        total: totalGestantes,
+        activas: gestantesActivas,
+        inactivas: totalGestantes - gestantesActivas
+      },
+      controles: {
+        total: totalControles,
+        realizados: controlesRealizados,
+        pendientes: totalControles - controlesRealizados
+      },
+      alertas: {
+        total: totalAlertas,
+        activas: alertasActivas,
+        resueltas: totalAlertas - alertasActivas
+      },
+      medicos: {
+        total: totalMedicos,
+        activos: medicosActivos,
+        inactivos: totalMedicos - medicosActivos
+      },
+      ips: {
+        total: totalIPS,
+        activas: ipsActivas,
+        inactivas: totalIPS - ipsActivas
+      },
+      fechaGeneracion: new Date().toISOString(),
+      periodo: 'Todos los registros'
+    };
+
+    console.log('📊 Resumen general generado exitosamente');
+
+    res.json({
+      success: true,
+      data: resumen
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo resumen general:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo resumen general: ' + error.message
+    });
+  }
+});
+
+// Descargar resumen general como PDF - NUEVO ENDPOINT
+app.get('/api/reportes/descargar/resumen-general/pdf', async (req, res) => {
+  try {
+    console.log('📄 Generando PDF de resumen general...');
+
+    // Obtener datos del resumen
+    const resumenResponse = await fetch(`${req.protocol}://${req.get('host')}/api/reportes/resumen-general`);
+    const resumenData = await resumenResponse.json();
+
+    if (!resumenData.success) {
+      throw new Error('Error obteniendo datos del resumen');
+    }
+
+    // Por ahora, devolver un PDF simple (en una implementación real usarías una librería como puppeteer o jsPDF)
+    const pdfContent = `
+      RESUMEN GENERAL DEL SISTEMA
+      ===========================
+      
+      Fecha de generación: ${new Date().toLocaleDateString()}
+      
+      GESTANTES:
+      - Total: ${resumenData.data.gestantes.total}
+      - Activas: ${resumenData.data.gestantes.activas}
+      - Inactivas: ${resumenData.data.gestantes.inactivas}
+      
+      CONTROLES PRENATALES:
+      - Total: ${resumenData.data.controles.total}
+      - Realizados: ${resumenData.data.controles.realizados}
+      - Pendientes: ${resumenData.data.controles.pendientes}
+      
+      ALERTAS:
+      - Total: ${resumenData.data.alertas.total}
+      - Activas: ${resumenData.data.alertas.activas}
+      - Resueltas: ${resumenData.data.alertas.resueltas}
+      
+      MÉDICOS:
+      - Total: ${resumenData.data.medicos.total}
+      - Activos: ${resumenData.data.medicos.activos}
+      - Inactivos: ${resumenData.data.medicos.inactivos}
+      
+      IPS:
+      - Total: ${resumenData.data.ips.total}
+      - Activas: ${resumenData.data.ips.activas}
+      - Inactivas: ${resumenData.data.ips.inactivas}
+    `;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="resumen-general.pdf"');
+    res.send(Buffer.from(pdfContent, 'utf8'));
+
+    console.log('📄 PDF de resumen general generado exitosamente');
+  } catch (error) {
+    console.error('❌ Error generando PDF de resumen general:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generando PDF de resumen general: ' + error.message
+    });
+  }
+});
+
+// Descargar resumen general como Excel - NUEVO ENDPOINT
+app.get('/api/reportes/descargar/resumen-general/excel', async (req, res) => {
+  try {
+    console.log('📊 Generando Excel de resumen general...');
+
+    // Obtener datos del resumen
+    const resumenResponse = await fetch(`${req.protocol}://${req.get('host')}/api/reportes/resumen-general`);
+    const resumenData = await resumenResponse.json();
+
+    if (!resumenData.success) {
+      throw new Error('Error obteniendo datos del resumen');
+    }
+
+    // Por ahora, devolver un CSV simple (en una implementación real usarías una librería como exceljs)
+    const csvContent = `Categoría,Total,Activos/Realizados,Inactivos/Pendientes
+Gestantes,${resumenData.data.gestantes.total},${resumenData.data.gestantes.activas},${resumenData.data.gestantes.inactivas}
+Controles,${resumenData.data.controles.total},${resumenData.data.controles.realizados},${resumenData.data.controles.pendientes}
+Alertas,${resumenData.data.alertas.total},${resumenData.data.alertas.activas},${resumenData.data.alertas.resueltas}
+Médicos,${resumenData.data.medicos.total},${resumenData.data.medicos.activos},${resumenData.data.medicos.inactivos}
+IPS,${resumenData.data.ips.total},${resumenData.data.ips.activas},${resumenData.data.ips.inactivas}`;
+
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.setHeader('Content-Disposition', 'attachment; filename="resumen-general.csv"');
+    res.send(csvContent);
+
+    console.log('📊 Excel de resumen general generado exitosamente');
+  } catch (error) {
+    console.error('❌ Error generando Excel de resumen general:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generando Excel de resumen general: ' + error.message
+    });
+  }
+});
+
+// Endpoint genérico para descargar resumen general (redirige según formato)
+app.get('/api/reportes/descargar/resumen-general', (req, res) => {
+  const formato = req.query.formato || 'pdf';
+  
+  if (formato === 'excel' || formato === 'xlsx') {
+    res.redirect('/api/reportes/descargar/resumen-general/excel');
+  } else {
+    res.redirect('/api/reportes/descargar/resumen-general/pdf');
+  }
+});
+
+// Estadísticas de gestantes - NUEVO ENDPOINT
+app.get('/api/reportes/estadisticas-gestantes', async (req, res) => {
+  try {
+    console.log('👥 Obteniendo estadísticas de gestantes...');
+
+    const { municipio_id, fecha_inicio, fecha_fin } = req.query;
+
+    // Construir filtros
+    const whereClause = {};
+    if (municipio_id) whereClause.municipio_id = municipio_id;
+    if (fecha_inicio && fecha_fin) {
+      whereClause.fecha_creacion = {
+        gte: new Date(fecha_inicio),
+        lte: new Date(fecha_fin)
+      };
+    }
+
+    const [
+      totalGestantes,
+      gestantesPorMunicipio,
+      gestantesPorRegimen,
+      gestantesRiesgoAlto,
+      gestantesActivas
+    ] = await Promise.all([
+      prisma.gestantes.count({ where: whereClause }),
+      prisma.gestantes.groupBy({
+        by: ['municipio_id'],
+        where: whereClause,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } }
+      }),
+      prisma.gestantes.groupBy({
+        by: ['regimen_salud'],
+        where: whereClause,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } }
+      }),
+      prisma.gestantes.count({
+        where: { ...whereClause, riesgo_alto: true }
+      }),
+      prisma.gestantes.count({
+        where: { ...whereClause, activa: true }
+      })
+    ]);
+
+    const estadisticas = {
+      resumen: {
+        total: totalGestantes,
+        activas: gestantesActivas,
+        inactivas: totalGestantes - gestantesActivas,
+        riesgoAlto: gestantesRiesgoAlto,
+        riesgoNormal: totalGestantes - gestantesRiesgoAlto
+      },
+      distribucionMunicipio: gestantesPorMunicipio,
+      distribucionRegimen: gestantesPorRegimen,
+      fechaGeneracion: new Date().toISOString()
+    };
+
+    console.log('👥 Estadísticas de gestantes generadas exitosamente');
+
+    res.json({
+      success: true,
+      data: estadisticas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de gestantes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas de gestantes: ' + error.message
+    });
+  }
+});
+
+// Estadísticas de controles - NUEVO ENDPOINT
+app.get('/api/reportes/estadisticas-controles', async (req, res) => {
+  try {
+    console.log('🩺 Obteniendo estadísticas de controles...');
+
+    const { fecha_inicio, fecha_fin, medico_id } = req.query;
+
+    // Construir filtros
+    const whereClause = {};
+    if (medico_id) whereClause.medico_id = medico_id;
+    if (fecha_inicio && fecha_fin) {
+      whereClause.fecha_control = {
+        gte: new Date(fecha_inicio),
+        lte: new Date(fecha_fin)
+      };
+    }
+
+    const [
+      totalControles,
+      controlesRealizados,
+      controlesPendientes,
+      controlesVencidos,
+      controlesPorMedico
+    ] = await Promise.all([
+      prisma.control_prenatal.count({ where: whereClause }),
+      prisma.control_prenatal.count({ where: { ...whereClause, realizado: true } }),
+      prisma.control_prenatal.count({ 
+        where: { 
+          ...whereClause, 
+          realizado: false,
+          fecha_control: { gte: new Date() }
+        } 
+      }),
+      prisma.control_prenatal.count({ 
+        where: { 
+          ...whereClause, 
+          realizado: false,
+          fecha_control: { lt: new Date() }
+        } 
+      }),
+      prisma.control_prenatal.groupBy({
+        by: ['medico_id'],
+        where: whereClause,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } }
+      })
+    ]);
+
+    const estadisticas = {
+      resumen: {
+        total: totalControles,
+        realizados: controlesRealizados,
+        pendientes: controlesPendientes,
+        vencidos: controlesVencidos,
+        porcentajeRealizados: totalControles > 0 ? (controlesRealizados / totalControles * 100).toFixed(2) : 0
+      },
+      distribucionMedico: controlesPorMedico,
+      fechaGeneracion: new Date().toISOString()
+    };
+
+    console.log('🩺 Estadísticas de controles generadas exitosamente');
+
+    res.json({
+      success: true,
+      data: estadisticas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de controles:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas de controles: ' + error.message
+    });
+  }
+});
+
+// Estadísticas de alertas - NUEVO ENDPOINT
+app.get('/api/reportes/estadisticas-alertas', async (req, res) => {
+  try {
+    console.log('🚨 Obteniendo estadísticas de alertas...');
+
+    const { fecha_inicio, fecha_fin, tipo_alerta } = req.query;
+
+    // Construir filtros
+    const whereClause = {};
+    if (tipo_alerta) whereClause.tipo_alerta = tipo_alerta;
+    if (fecha_inicio && fecha_fin) {
+      whereClause.fecha_creacion = {
+        gte: new Date(fecha_inicio),
+        lte: new Date(fecha_fin)
+      };
+    }
+
+    const [
+      totalAlertas,
+      alertasActivas,
+      alertasResueltas,
+      alertasPorTipo,
+      alertasPorPrioridad
+    ] = await Promise.all([
+      prisma.alertas.count({ where: whereClause }),
+      prisma.alertas.count({ where: { ...whereClause, resuelta: false } }),
+      prisma.alertas.count({ where: { ...whereClause, resuelta: true } }),
+      prisma.alertas.groupBy({
+        by: ['tipo_alerta'],
+        where: whereClause,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } }
+      }),
+      prisma.alertas.groupBy({
+        by: ['nivel_prioridad'],
+        where: whereClause,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } }
+      })
+    ]);
+
+    const estadisticas = {
+      resumen: {
+        total: totalAlertas,
+        activas: alertasActivas,
+        resueltas: alertasResueltas,
+        porcentajeResueltas: totalAlertas > 0 ? (alertasResueltas / totalAlertas * 100).toFixed(2) : 0
+      },
+      distribucionTipo: alertasPorTipo,
+      distribucionPrioridad: alertasPorPrioridad,
+      fechaGeneracion: new Date().toISOString()
+    };
+
+    console.log('🚨 Estadísticas de alertas generadas exitosamente');
+
+    res.json({
+      success: true,
+      data: estadisticas
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de alertas:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas de alertas: ' + error.message
+    });
+  }
+});
+
+// ==================== FIN ENDPOINTS DE REPORTES ====================
 
 // 404 handler - NUEVO
 app.use('*', (req, res) => {

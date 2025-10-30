@@ -40,7 +40,8 @@ export const getAllGestantes = async (req: Request, res: Response) => {
 		const resultado = await gestanteService.buscarGestantes(filtros);
 
 		console.log(`✅ Controller: Returning ${resultado.data.length} gestantes`);
-		res.json(resultado);
+		// Estandarizar respuesta como array directo (como IPS y médicos)
+		res.json(resultado.data);
 	} catch (error) {
 		console.error('❌ Controller: Error searching gestantes:', error);
 

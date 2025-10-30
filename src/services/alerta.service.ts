@@ -366,7 +366,22 @@ export class AlertaService {
             type: 'Point',
             coordinates: data.coordenadas
           } : Prisma.JsonNull,
-          resuelta: false
+          resuelta: false,
+
+          // Campos de ubicación GPS (SOS)
+          ubicacion_lat: data.ubicacion_lat || null,
+          ubicacion_lng: data.ubicacion_lng || null,
+          ubicacion_precision: data.ubicacion_precision || null,
+
+          // Datos de Madrina (SOS)
+          nombre_madrina: data.nombre_madrina || null,
+          telefono_madrina: data.telefono_madrina || null,
+
+          // Datos de Gestante (SOS)
+          nombre_gestante: data.nombre_gestante || null,
+          telefono_gestante: data.telefono_gestante || null,
+          direccion_gestante: data.direccion_gestante || null,
+          municipio: data.municipio || null
         } as any,
         include: {
           gestante: {

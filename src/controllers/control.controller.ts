@@ -33,6 +33,7 @@ export const getAllControles = async (req: Request, res: Response) => {
 		}
 
 		console.log(`🔐 Controller: Returning ${controles.length} controles for ${user.rol}`);
+		// Estandarizar respuesta como array directo (como IPS y médicos)
 		res.json(controles);
 	} catch (error) {
 		console.error('❌ Controller: Error fetching controles:', error);

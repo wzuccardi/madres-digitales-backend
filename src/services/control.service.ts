@@ -109,10 +109,10 @@ export class ControlService {
 					gestante_id: data.gestante_id,
 					medico_id: data.medico_id || 'c66fdb18-76f4-4767-95ad-9b4b81fa6add', // Usuario por defecto (admin)
 					fecha_control: new Date(data.fecha_control),
-					semanas_gestacion: data.semanas_gestacion || null,
-					peso: data.peso || null,
-					presion_sistolica: data.presion_sistolica || null,
-					presion_diastolica: data.presion_diastolica || null,
+					semanas_gestacion: data.semanas_gestacion ? parseInt(data.semanas_gestacion.toString()) : null,
+					peso: data.peso ? parseFloat(data.peso.toString()) : null,
+					presion_sistolica: data.presion_sistolica ? parseInt(data.presion_sistolica.toString()) : null,
+					presion_diastolica: data.presion_diastolica ? parseInt(data.presion_diastolica.toString()) : null,
 				} as any
 			});
 
@@ -157,10 +157,10 @@ export class ControlService {
 					gestante_id: data.gestante_id || existingControl.gestante_id,
 					medico_id: data.medico_id !== undefined ? data.medico_id : existingControl.medico_id,
 					fecha_control: data.fecha_control ? new Date(data.fecha_control) : existingControl.fecha_control,
-					semanas_gestacion: data.semanas_gestacion !== undefined ? data.semanas_gestacion : existingControl.semanas_gestacion,
-					peso: data.peso !== undefined ? data.peso : existingControl.peso,
-					presion_sistolica: data.presion_sistolica !== undefined ? data.presion_sistolica : existingControl.presion_sistolica,
-					presion_diastolica: data.presion_diastolica !== undefined ? data.presion_diastolica : existingControl.presion_diastolica,
+					semanas_gestacion: data.semanas_gestacion !== undefined ? (data.semanas_gestacion ? parseInt(data.semanas_gestacion.toString()) : null) : existingControl.semanas_gestacion,
+					peso: data.peso !== undefined ? (data.peso ? parseFloat(data.peso.toString()) : null) : existingControl.peso,
+					presion_sistolica: data.presion_sistolica !== undefined ? (data.presion_sistolica ? parseInt(data.presion_sistolica.toString()) : null) : existingControl.presion_sistolica,
+					presion_diastolica: data.presion_diastolica !== undefined ? (data.presion_diastolica ? parseInt(data.presion_diastolica.toString()) : null) : existingControl.presion_diastolica,
 				} as any
 			});
 
