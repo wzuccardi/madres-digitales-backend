@@ -10,6 +10,8 @@ const app = express();
 // CORS configuration - MEJORADO
 const corsOptions = {
   origin: function (origin, callback) {
+    console.log('🔍 CORS check for origin:', origin);
+    
     // Lista de orígenes permitidos
     const allowedOrigins = [
       'http://localhost:3008',
@@ -19,29 +21,43 @@ const corsOptions = {
       'https://madres-digitales-frontend.vercel.app',
       'https://madres-digitales.vercel.app',
       'https://madres-digitales-backend.vercel.app',
+      'https://madres-digitales-backend-pp8vnv107-maildipablo22-4886s-projects.vercel.app',
       // Dominios de frontend de Vercel
       'https://madres-digitales-frontend-1bw6x2ir0.vercel.app',
       'https://madresdigitalesflutter-ncxd8av5c-maildipablo22-4886s-projects.vercel.app',
-      'https://madresdigitalesflutternew.vercel.app'
+      'https://madresdigitalesflutternew.vercel.app',
+      'https://madresdigitalesflutter-95hh3cvkq-maildipablo22-4886s-projects.vercel.app'
     ];
 
     // Permitir requests sin origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-
-    // Permitir cualquier localhost (para Flutter con puertos dinámicos)
-    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+    if (!origin) {
+      console.log('✅ CORS: No origin (mobile/postman) - ALLOWED');
       return callback(null, true);
     }
 
-    // Permitir cualquier dominio de Vercel del proyecto madres-digitales
+    // Permitir cualquier localhost (para Flutter con puertos dinámicos)
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      console.log('✅ CORS: Localhost - ALLOWED');
+      return callback(null, true);
+    }
+
+    // TEMPORAL: Permitir TODOS los dominios de Vercel para resolver el problema de URLs dinámicas
+    if (origin.endsWith('.vercel.app')) {
+      console.log('✅ CORS: Vercel domain - ALLOWED (temporal)');
+      return callback(null, true);
+    }
+
+    // Permitir dominios específicos del proyecto
     if (origin && (
       (origin.includes('madres-digitales') && origin.includes('.vercel.app')) ||
       (origin.includes('madresdigitales') && origin.includes('.vercel.app'))
     )) {
+      console.log('✅ CORS: Project domain - ALLOWED');
       return callback(null, true);
     }
 
     if (allowedOrigins.indexOf(origin) !== -1) {
+      console.log('✅ CORS: Whitelist domain - ALLOWED');
       callback(null, true);
     } else {
       console.log('❌ CORS blocked origin:', origin);
@@ -70,12 +86,11 @@ app.options('*', (req, res) => {
   const origin = req.headers.origin;
   console.log('🔄 Preflight request from:', origin);
   
-  // Verificar si el origen está permitido
+  // TEMPORAL: Permitir todos los dominios de Vercel para resolver URLs dinámicas
   if (!origin || 
       origin.startsWith('http://localhost:') || 
       origin.startsWith('http://127.0.0.1:') ||
-      (origin.includes('madres-digitales') && origin.includes('.vercel.app')) ||
-      (origin.includes('madresdigitales') && origin.includes('.vercel.app'))) {
+      origin.endsWith('.vercel.app')) {
     
     res.header('Access-Control-Allow-Origin', origin || '*');
     res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
