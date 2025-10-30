@@ -64,6 +64,32 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// Middleware adicional para manejar preflight requests
+app.options('*', (req, res) => {
+  const origin = req.headers.origin;
+  console.log('🔄 Preflight request from:', origin);
+  
+  // Verificar si el origen está permitido
+  if (!origin || 
+      origin.startsWith('http://localhost:') || 
+      origin.startsWith('http://127.0.0.1:') ||
+      (origin.includes('madres-digitales') && origin.includes('.vercel.app')) ||
+      (origin.includes('madresdigitales') && origin.includes('.vercel.app'))) {
+    
+    res.header('Access-Control-Allow-Origin', origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,Cache-Control');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400');
+    
+    console.log('✅ Preflight approved for:', origin);
+    return res.status(200).end();
+  }
+  
+  console.log('❌ Preflight blocked for:', origin);
+  return res.status(403).end();
+});
+
 // UTF-8 Encoding Configuration - IMPORTANTE PARA ESPAÑOL
 app.use(express.json({
   charset: 'utf-8',
