@@ -6,7 +6,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 const app = express();
-//probando para actualizar
+//probando para actualizar - v2
 // CORS configuration - MEJORADO
 const corsOptions = {
   origin: function (origin, callback) {
@@ -773,7 +773,7 @@ app.post('/api/gestantes', async (req, res) => {
         madrina: nuevaGestante.madrina?.nombre || null,
         medico_tratante: nuevaGestante.medico_tratante?.nombre || null,
         ips_asignada: nuevaGestante.ips_asignada?.nombre || null,
-        fechaCreacion: nuevaGestante.fecha_creacion.toISOString().split('T')[0]
+        fechaCreacion: nuevaGestante.fecha_creacion ? nuevaGestante.fecha_creacion.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       }
     });
   } catch (error) {
@@ -827,17 +827,30 @@ app.post('/api/medicos', async (req, res) => {
         ips_id,
         municipio_id,
         activo
-      },
-      include: {
-        ips: true,
-        municipios: true,
-        gestantes: {
-          where: { activa: true }
-        }
       }
     });
 
     console.log('✅ Médico creado exitosamente:', nuevoMedico.id);
+
+    // Obtener datos relacionados si existen
+    let ipsNombre = null;
+    let municipioNombre = null;
+
+    if (ips_id) {
+      const ips = await prisma.ips.findUnique({
+        where: { id: ips_id },
+        select: { nombre: true }
+      });
+      ipsNombre = ips?.nombre || null;
+    }
+
+    if (municipio_id) {
+      const municipio = await prisma.municipios.findUnique({
+        where: { id: municipio_id },
+        select: { nombre: true }
+      });
+      municipioNombre = municipio?.nombre || null;
+    }
 
     res.status(201).json({
       success: true,
@@ -850,10 +863,10 @@ app.post('/api/medicos', async (req, res) => {
         especialidad: nuevoMedico.especialidad,
         email: nuevoMedico.email,
         registroMedico: nuevoMedico.registro_medico,
-        ips: nuevoMedico.ips?.nombre || null,
-        municipio: nuevoMedico.municipios?.nombre || null,
-        gestantesAsignadas: nuevoMedico.gestantes.length,
-        fechaCreacion: nuevoMedico.fecha_creacion.toISOString().split('T')[0]
+        ips: ipsNombre,
+        municipio: municipioNombre,
+        activo: nuevoMedico.activo,
+        fechaCreacion: nuevoMedico.fecha_creacion ? nuevoMedico.fecha_creacion.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
       }
     });
   } catch (error) {
@@ -1176,7 +1189,7 @@ app.post('/api/alertas', async (req, res) => {
           nombre: nuevaAlerta.madrina.nombre,
           telefono: nuevaAlerta.madrina.telefono
         } : null,
-        fechaCreacion: nuevaAlerta.fecha_creacion.toISOString(),
+        fechaCreacion: nuevaAlerta.fecha_creacion ? nuevaAlerta.fecha_creacion.toISOString() : new Date().toISOString(),
         resuelta: nuevaAlerta.resuelta
       }
     });
