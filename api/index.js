@@ -1147,16 +1147,19 @@ app.post('/api/alertas', async (req, res) => {
       tipo_alerta = 'SEGUIMIENTO',
       nivel_prioridad = 'MEDIA',
       mensaje,
-      descripcion,
-      ubicacion_latitud,
-      ubicacion_longitud,
-      contacto_emergencia_nombre,
-      contacto_emergencia_telefono,
+      sintomas,
+      coordenadas_alerta,
+      ubicacion_lat,
+      ubicacion_lng,
+      ubicacion_precision,
+      generado_por_id,
       es_automatica = false,
+      score_riesgo,
       resuelta = false
     } = req.body;
 
     console.log('🚨 Creando nueva alerta...');
+    console.log('📋 Datos recibidos:', JSON.stringify(req.body, null, 2));
 
     // Validaciones básicas
     if (!gestante_id || !mensaje) {
@@ -1166,9 +1169,38 @@ app.post('/api/alertas', async (req, res) => {
       });
     }
 
-    // Verificar que la gestante existe
+    // Verificar que la gestante existe y obtener datos completos
     const gestante = await prisma.gestantes.findUnique({
-      where: { id: gestante_id }
+      where: { id: gestante_id },
+      include: {
+        municipios: {
+          select: {
+            nombre: true,
+            departamento: true
+          }
+        },
+        madrina: {
+          select: {
+            nombre: true,
+            telefono: true,
+            email: true
+          }
+        },
+        medico_tratante: {
+          select: {
+            nombre: true,
+            telefono: true,
+            especialidad: true
+          }
+        },
+        ips_asignada: {
+          select: {
+            nombre: true,
+            telefono: true,
+            direccion: true
+          }
+        }
+      }
     });
 
     if (!gestante) {
@@ -1178,35 +1210,80 @@ app.post('/api/alertas', async (req, res) => {
       });
     }
 
+    // Calcular edad de la gestante
+    const edad = Math.floor((new Date() - new Date(gestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000));
+
+    // Calcular semanas de gestación si hay fecha de última menstruación
+    let semanasGestacion = null;
+    if (gestante.fecha_ultima_menstruacion) {
+      const diasGestacion = Math.floor((new Date() - new Date(gestante.fecha_ultima_menstruacion)) / (24 * 60 * 60 * 1000));
+      semanasGestacion = Math.floor(diasGestacion / 7);
+    }
+
     // Generar ID único
-    const alertaId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const alertaId = `alert-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+
+    // Crear mensaje descriptivo enriquecido
+    const mensajeDescriptivo = `${mensaje}\n\n` +
+      `GESTANTE: ${gestante.nombre}\n` +
+      `Documento: ${gestante.documento || 'No registrado'}\n` +
+      `Edad: ${edad} años\n` +
+      `Teléfono: ${gestante.telefono || 'No registrado'}\n` +
+      `Semanas de gestación: ${semanasGestacion ? `${semanasGestacion} semanas` : 'No calculado'}\n` +
+      `Municipio: ${gestante.municipios?.nombre || 'No registrado'}, ${gestante.municipios?.departamento || ''}\n` +
+      `Riesgo alto: ${gestante.riesgo_alto ? 'SÍ' : 'NO'}\n` +
+      (gestante.madrina ? `\nMADRINA: ${gestante.madrina.nombre}\nTeléfono: ${gestante.madrina.telefono || 'No registrado'}` : '') +
+      (gestante.medico_tratante ? `\n\nMÉDICO TRATANTE: ${gestante.medico_tratante.nombre}\nEspecialidad: ${gestante.medico_tratante.especialidad || 'No especificada'}` : '') +
+      (gestante.ips_asignada ? `\n\nIPS ASIGNADA: ${gestante.ips_asignada.nombre}\nDirección: ${gestante.ips_asignada.direccion || 'No registrada'}` : '');
 
     const nuevaAlerta = await prisma.alertas.create({
       data: {
         id: alertaId,
         gestante_id,
-        madrina_id,
-        medico_asignado_id,
-        ips_derivada_id,
+        madrina_id: madrina_id || gestante.madrina_id,
+        medico_asignado_id: medico_asignado_id || gestante.medico_tratante_id,
+        ips_derivada_id: ips_derivada_id || gestante.ips_asignada_id,
         tipo_alerta,
         nivel_prioridad,
-        mensaje,
-        descripcion,
-        ubicacion_latitud,
-        ubicacion_longitud,
-        contacto_emergencia_nombre,
-        contacto_emergencia_telefono,
+        mensaje: mensajeDescriptivo,
+        sintomas,
+        coordenadas_alerta,
+        ubicacion_lat,
+        ubicacion_lng,
+        ubicacion_precision,
+        nombre_gestante: gestante.nombre,
+        telefono_gestante: gestante.telefono,
+        direccion_gestante: gestante.direccion,
+        municipio: gestante.municipios?.nombre,
+        nombre_madrina: gestante.madrina?.nombre,
+        telefono_madrina: gestante.madrina?.telefono,
+        generado_por_id,
         es_automatica,
+        score_riesgo,
         resuelta,
-        fecha_creacion: new Date(),
-        fecha_actualizacion: new Date()
+        estado: 'pendiente'
       },
       include: {
         gestante: {
-          select: { nombre: true, documento: true, telefono: true }
+          select: {
+            nombre: true,
+            documento: true,
+            telefono: true,
+            fecha_nacimiento: true,
+            riesgo_alto: true,
+            municipios: {
+              select: {
+                nombre: true,
+                departamento: true
+              }
+            }
+          }
         },
         madrina: {
-          select: { nombre: true, telefono: true }
+          select: { nombre: true, telefono: true, email: true }
+        },
+        medico_asignado: {
+          select: { nombre: true, telefono: true, especialidad: true }
         }
       }
     });
@@ -1216,21 +1293,42 @@ app.post('/api/alertas', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Alerta creada exitosamente',
-      data: {
+      alerta: {
         id: nuevaAlerta.id,
-        tipo: nuevaAlerta.tipo_alerta,
-        prioridad: nuevaAlerta.nivel_prioridad,
+        gestante_id: nuevaAlerta.gestante_id,
+        tipo_alerta: nuevaAlerta.tipo_alerta,
+        nivel_prioridad: nuevaAlerta.nivel_prioridad,
         mensaje: nuevaAlerta.mensaje,
+        sintomas: nuevaAlerta.sintomas,
+        coordenadas_alerta: nuevaAlerta.coordenadas_alerta,
+        ubicacion_lat: nuevaAlerta.ubicacion_lat,
+        ubicacion_lng: nuevaAlerta.ubicacion_lng,
+        estado: nuevaAlerta.estado,
+        es_automatica: nuevaAlerta.es_automatica,
+        score_riesgo: nuevaAlerta.score_riesgo,
+        resuelta: nuevaAlerta.resuelta,
+        fecha_creacion: nuevaAlerta.fecha_creacion,
+        fecha_actualizacion: nuevaAlerta.fecha_actualizacion,
         gestante: {
           nombre: nuevaAlerta.gestante.nombre,
-          documento: nuevaAlerta.gestante.documento
+          documento: nuevaAlerta.gestante.documento,
+          telefono: nuevaAlerta.gestante.telefono,
+          edad: edad,
+          semanas_gestacion: semanasGestacion,
+          riesgo_alto: nuevaAlerta.gestante.riesgo_alto,
+          municipio: nuevaAlerta.gestante.municipios?.nombre,
+          departamento: nuevaAlerta.gestante.municipios?.departamento
         },
         madrina: nuevaAlerta.madrina ? {
           nombre: nuevaAlerta.madrina.nombre,
-          telefono: nuevaAlerta.madrina.telefono
+          telefono: nuevaAlerta.madrina.telefono,
+          email: nuevaAlerta.madrina.email
         } : null,
-        fechaCreacion: nuevaAlerta.fecha_creacion ? nuevaAlerta.fecha_creacion.toISOString() : new Date().toISOString(),
-        resuelta: nuevaAlerta.resuelta
+        medico_asignado: nuevaAlerta.medico_asignado ? {
+          nombre: nuevaAlerta.medico_asignado.nombre,
+          telefono: nuevaAlerta.medico_asignado.telefono,
+          especialidad: nuevaAlerta.medico_asignado.especialidad
+        } : null
       }
     });
   } catch (error) {
