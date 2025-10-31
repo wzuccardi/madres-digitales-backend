@@ -1626,6 +1626,16 @@ app.post('/api/controles', async (req, res) => {
     const controlId = `control-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     console.log('🆔 ID generado para control:', controlId);
 
+    // Convertir movimientos_fetales de boolean a string si es necesario
+    let movimientos_fetales_str = null;
+    if (movimientos_fetales !== undefined && movimientos_fetales !== null) {
+      if (typeof movimientos_fetales === 'boolean') {
+        movimientos_fetales_str = movimientos_fetales ? 'presentes' : 'ausentes';
+      } else {
+        movimientos_fetales_str = movimientos_fetales;
+      }
+    }
+
     const nuevoControl = await prisma.control_prenatal.create({
       data: {
         id: controlId,
@@ -1639,7 +1649,7 @@ app.post('/api/controles', async (req, res) => {
         presion_diastolica,
         frecuencia_cardiaca,
         temperatura,
-        movimientos_fetales,
+        movimientos_fetales: movimientos_fetales_str,
         edemas,
         recomendaciones,
         observaciones,
