@@ -1293,7 +1293,7 @@ app.post('/api/alertas', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Alerta creada exitosamente',
-      alerta: {
+      data: {
         id: nuevaAlerta.id,
         gestante_id: nuevaAlerta.gestante_id,
         tipo_alerta: nuevaAlerta.tipo_alerta,
