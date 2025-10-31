@@ -1703,19 +1703,40 @@ app.post('/api/controles', async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Control prenatal creado exitosamente',
-      data: {
+      control: {
         id: nuevoControl.id,
-        gestante: {
+        gestante_id: nuevoControl.gestante_id,
+        medico_id: nuevoControl.medico_id,
+        fecha_control: nuevoControl.fecha_control,
+        semanas_gestacion: nuevoControl.semanas_gestacion,
+        peso: nuevoControl.peso,
+        altura_uterina: nuevoControl.altura_uterina,
+        presion_sistolica: nuevoControl.presion_sistolica,
+        presion_diastolica: nuevoControl.presion_diastolica,
+        frecuencia_cardiaca: nuevoControl.frecuencia_cardiaca,
+        frecuencia_respiratoria: nuevoControl.frecuencia_respiratoria,
+        temperatura: nuevoControl.temperatura,
+        movimientos_fetales: nuevoControl.movimientos_fetales,
+        edemas: nuevoControl.edemas,
+        proteinuria: nuevoControl.proteinuria,
+        glucosuria: nuevoControl.glucosuria,
+        hallazgos: nuevoControl.hallazgos,
+        recomendaciones: nuevoControl.recomendaciones,
+        observaciones: nuevoControl.observaciones,
+        proximo_control: nuevoControl.proximo_control,
+        examenes_solicitados: nuevoControl.examenes_solicitados,
+        resultados_examenes: nuevoControl.resultados_examenes,
+        realizado: nuevoControl.realizado,
+        fecha_creacion: nuevoControl.fecha_creacion,
+        fecha_actualizacion: nuevoControl.fecha_actualizacion,
+        gestante: nuevoControl.gestante ? {
           nombre: nuevoControl.gestante.nombre,
           documento: nuevoControl.gestante.documento
-        },
+        } : null,
         medico: nuevoControl.medico ? {
           nombre: nuevoControl.medico.nombre,
           especialidad: nuevoControl.medico.especialidad
-        } : null,
-        fechaControl: nuevoControl.fecha_control.toISOString().split('T')[0],
-        semanasGestacion: nuevoControl.semanas_gestacion,
-        realizado: nuevoControl.realizado
+        } : null
       }
     });
   } catch (error) {
