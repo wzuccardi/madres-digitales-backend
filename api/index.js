@@ -1606,10 +1606,30 @@ app.post('/api/controles', async (req, res) => {
       });
     }
 
+    // Verificar que el médico existe si se proporciona
+    if (medico_id) {
+      const medico = await prisma.medicos.findUnique({
+        where: { id: medico_id }
+      });
+      if (!medico) {
+        console.log('❌ Médico no encontrado:', medico_id);
+        return res.status(400).json({
+          success: false,
+          error: `El médico con ID ${medico_id} no existe`
+        });
+      }
+      console.log('✅ Médico encontrado:', medico.nombre);
+    }
+
+    // Generar ID único para el control
+    const controlId = `control-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    console.log('🆔 ID generado para control:', controlId);
+
     const nuevoControl = await prisma.control_prenatal.create({
       data: {
+        id: controlId,
         gestante_id,
-        medico_id,
+        medico_id: medico_id || null,
         fecha_control: new Date(fecha_control),
         semanas_gestacion,
         peso,
