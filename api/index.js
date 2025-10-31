@@ -1585,6 +1585,7 @@ app.post('/api/controles', async (req, res) => {
     } = req.body;
 
     console.log('🩺 Creando nuevo control prenatal...');
+    console.log('📋 Datos recibidos:', JSON.stringify(req.body, null, 2));
 
     // Validaciones básicas
     if (!gestante_id || !fecha_control) {
