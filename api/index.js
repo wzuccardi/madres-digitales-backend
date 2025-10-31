@@ -1575,12 +1575,18 @@ app.post('/api/controles', async (req, res) => {
       presion_sistolica,
       presion_diastolica,
       frecuencia_cardiaca,
+      frecuencia_respiratoria,
       temperatura,
       movimientos_fetales,
       edemas,
+      proteinuria,
+      glucosuria,
+      hallazgos,
       recomendaciones,
       observaciones,
       proximo_control,
+      examenes_solicitados,
+      resultados_examenes,
       realizado = false
     } = req.body;
 
@@ -1636,24 +1642,44 @@ app.post('/api/controles', async (req, res) => {
       }
     }
 
+    // Función auxiliar para convertir a número o null
+    const toNumberOrNull = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const num = Number(value);
+      return isNaN(num) ? null : num;
+    };
+
+    // Función auxiliar para convertir a entero o null
+    const toIntOrNull = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const num = parseInt(value, 10);
+      return isNaN(num) ? null : num;
+    };
+
     const nuevoControl = await prisma.control_prenatal.create({
       data: {
         id: controlId,
         gestante_id,
         medico_id: medico_id || null,
         fecha_control: new Date(fecha_control),
-        semanas_gestacion,
-        peso,
-        altura_uterina,
-        presion_sistolica,
-        presion_diastolica,
-        frecuencia_cardiaca,
-        temperatura,
+        semanas_gestacion: toIntOrNull(semanas_gestacion),
+        peso: toNumberOrNull(peso),
+        altura_uterina: toNumberOrNull(altura_uterina),
+        presion_sistolica: toIntOrNull(presion_sistolica),
+        presion_diastolica: toIntOrNull(presion_diastolica),
+        frecuencia_cardiaca: toIntOrNull(frecuencia_cardiaca),
+        frecuencia_respiratoria: toIntOrNull(frecuencia_respiratoria),
+        temperatura: toNumberOrNull(temperatura),
         movimientos_fetales: movimientos_fetales_str,
         edemas,
+        proteinuria,
+        glucosuria,
+        hallazgos,
         recomendaciones,
         observaciones,
         proximo_control: proximo_control ? new Date(proximo_control) : null,
+        examenes_solicitados,
+        resultados_examenes,
         realizado
       },
       include: {
