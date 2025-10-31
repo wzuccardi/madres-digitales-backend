@@ -802,6 +802,7 @@ app.post('/api/medicos', async (req, res) => {
     } = req.body;
 
     console.log('👨‍⚕️ Creando nuevo médico...');
+    console.log('📋 Datos recibidos:', { nombre, documento, ips_id, municipio_id });
 
     // Validaciones básicas
     if (!nombre || !documento) {
@@ -809,6 +810,32 @@ app.post('/api/medicos', async (req, res) => {
         success: false,
         error: 'Nombre y documento son requeridos'
       });
+    }
+
+    // Validar que ips_id existe si se proporciona
+    if (ips_id) {
+      const ipsExists = await prisma.ips.findUnique({
+        where: { id: ips_id }
+      });
+      if (!ipsExists) {
+        return res.status(400).json({
+          success: false,
+          error: `La IPS con ID ${ips_id} no existe`
+        });
+      }
+    }
+
+    // Validar que municipio_id existe si se proporciona
+    if (municipio_id) {
+      const municipioExists = await prisma.municipios.findUnique({
+        where: { id: municipio_id }
+      });
+      if (!municipioExists) {
+        return res.status(400).json({
+          success: false,
+          error: `El municipio con ID ${municipio_id} no existe`
+        });
+      }
     }
 
     // Generar ID único
@@ -820,12 +847,12 @@ app.post('/api/medicos', async (req, res) => {
         nombre,
         documento,
         tipo_documento,
-        telefono,
-        especialidad,
-        email,
-        registro_medico,
-        ips_id,
-        municipio_id,
+        telefono: telefono || null,
+        especialidad: especialidad || null,
+        email: email || null,
+        registro_medico: registro_medico || null,
+        ips_id: ips_id || null,
+        municipio_id: municipio_id || null,
         activo
       }
     });
