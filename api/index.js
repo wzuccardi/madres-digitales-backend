@@ -686,6 +686,105 @@ app.get('/api/gestantes', async (req, res) => {
   }
 });
 
+// Crear gestante - NUEVO ENDPOINT
+app.post('/api/gestantes', async (req, res) => {
+  try {
+    const {
+      documento,
+      tipo_documento = 'cedula',
+      nombre,
+      fecha_nacimiento,
+      telefono,
+      direccion,
+      fecha_ultima_menstruacion,
+      fecha_probable_parto,
+      eps,
+      regimen_salud = 'subsidiado',
+      municipio_id,
+      madrina_id,
+      medico_tratante_id,
+      ips_asignada_id,
+      riesgo_alto = false,
+      activa = true
+    } = req.body;
+
+    console.log('🤰 Creando nueva gestante...');
+
+    // Validaciones básicas
+    if (!nombre || !fecha_nacimiento) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre y fecha de nacimiento son requeridos'
+      });
+    }
+
+    // Generar ID único
+    const gestanteId = `gest-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const nuevaGestante = await prisma.gestantes.create({
+      data: {
+        id: gestanteId,
+        documento,
+        tipo_documento,
+        nombre,
+        fecha_nacimiento: new Date(fecha_nacimiento),
+        telefono,
+        direccion,
+        fecha_ultima_menstruacion: fecha_ultima_menstruacion ? new Date(fecha_ultima_menstruacion) : null,
+        fecha_probable_parto: fecha_probable_parto ? new Date(fecha_probable_parto) : null,
+        eps,
+        regimen_salud,
+        municipio_id,
+        madrina_id,
+        medico_tratante_id,
+        ips_asignada_id,
+        riesgo_alto,
+        activa,
+        fecha_creacion: new Date(),
+        fecha_actualizacion: new Date()
+      },
+      include: {
+        municipios: true,
+        madrina: true,
+        medico_tratante: true,
+        ips_asignada: true
+      }
+    });
+
+    console.log('✅ Gestante creada exitosamente:', nuevaGestante.id);
+
+    // Calcular edad
+    const edad = Math.floor((new Date() - new Date(nuevaGestante.fecha_nacimiento)) / (365.25 * 24 * 60 * 60 * 1000));
+
+    res.status(201).json({
+      success: true,
+      message: 'Gestante creada exitosamente',
+      data: {
+        id: nuevaGestante.id,
+        documento: nuevaGestante.documento,
+        nombre: nuevaGestante.nombre,
+        edad: edad,
+        telefono: nuevaGestante.telefono,
+        direccion: nuevaGestante.direccion,
+        eps: nuevaGestante.eps,
+        regimen_salud: nuevaGestante.regimen_salud,
+        riesgo_alto: nuevaGestante.riesgo_alto,
+        municipio: nuevaGestante.municipios?.nombre || null,
+        madrina: nuevaGestante.madrina?.nombre || null,
+        medico_tratante: nuevaGestante.medico_tratante?.nombre || null,
+        ips_asignada: nuevaGestante.ips_asignada?.nombre || null,
+        fechaCreacion: nuevaGestante.fecha_creacion.toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creando gestante:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error creando gestante: ' + error.message
+    });
+  }
+});
+
 // Crear médico - NUEVO ENDPOINT
 app.post('/api/medicos', async (req, res) => {
   try {
@@ -980,6 +1079,112 @@ app.get('/api/alertas-automaticas/alertas', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error obteniendo alertas: ' + error.message
+    });
+  }
+});
+
+// Crear alerta - NUEVO ENDPOINT
+app.post('/api/alertas', async (req, res) => {
+  try {
+    const {
+      gestante_id,
+      madrina_id,
+      medico_asignado_id,
+      ips_derivada_id,
+      tipo_alerta = 'SEGUIMIENTO',
+      nivel_prioridad = 'MEDIA',
+      mensaje,
+      descripcion,
+      ubicacion_latitud,
+      ubicacion_longitud,
+      contacto_emergencia_nombre,
+      contacto_emergencia_telefono,
+      es_automatica = false,
+      resuelta = false
+    } = req.body;
+
+    console.log('🚨 Creando nueva alerta...');
+
+    // Validaciones básicas
+    if (!gestante_id || !mensaje) {
+      return res.status(400).json({
+        success: false,
+        error: 'ID de gestante y mensaje son requeridos'
+      });
+    }
+
+    // Verificar que la gestante existe
+    const gestante = await prisma.gestantes.findUnique({
+      where: { id: gestante_id }
+    });
+
+    if (!gestante) {
+      return res.status(404).json({
+        success: false,
+        error: 'Gestante no encontrada'
+      });
+    }
+
+    // Generar ID único
+    const alertaId = `alert-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const nuevaAlerta = await prisma.alertas.create({
+      data: {
+        id: alertaId,
+        gestante_id,
+        madrina_id,
+        medico_asignado_id,
+        ips_derivada_id,
+        tipo_alerta,
+        nivel_prioridad,
+        mensaje,
+        descripcion,
+        ubicacion_latitud,
+        ubicacion_longitud,
+        contacto_emergencia_nombre,
+        contacto_emergencia_telefono,
+        es_automatica,
+        resuelta,
+        fecha_creacion: new Date(),
+        fecha_actualizacion: new Date()
+      },
+      include: {
+        gestante: {
+          select: { nombre: true, documento: true, telefono: true }
+        },
+        madrina: {
+          select: { nombre: true, telefono: true }
+        }
+      }
+    });
+
+    console.log('✅ Alerta creada exitosamente:', nuevaAlerta.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Alerta creada exitosamente',
+      data: {
+        id: nuevaAlerta.id,
+        tipo: nuevaAlerta.tipo_alerta,
+        prioridad: nuevaAlerta.nivel_prioridad,
+        mensaje: nuevaAlerta.mensaje,
+        gestante: {
+          nombre: nuevaAlerta.gestante.nombre,
+          documento: nuevaAlerta.gestante.documento
+        },
+        madrina: nuevaAlerta.madrina ? {
+          nombre: nuevaAlerta.madrina.nombre,
+          telefono: nuevaAlerta.madrina.telefono
+        } : null,
+        fechaCreacion: nuevaAlerta.fecha_creacion.toISOString(),
+        resuelta: nuevaAlerta.resuelta
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creando alerta:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error creando alerta: ' + error.message
     });
   }
 });
@@ -1978,6 +2183,97 @@ app.get('/api/municipios', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error obteniendo municipios: ' + error.message
+    });
+  }
+});
+
+// Crear usuario - NUEVO ENDPOINT
+app.post('/api/usuarios', async (req, res) => {
+  try {
+    const {
+      nombre,
+      email,
+      password,
+      documento,
+      tipo_documento = 'cedula',
+      rol = 'MADRINA',
+      municipio_id,
+      telefono,
+      activo = true
+    } = req.body;
+
+    console.log('👤 Creando nuevo usuario...');
+
+    // Validaciones básicas
+    if (!nombre || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Nombre, email y contraseña son requeridos'
+      });
+    }
+
+    // Verificar si el email ya existe
+    const usuarioExistente = await prisma.usuarios.findUnique({
+      where: { email }
+    });
+
+    if (usuarioExistente) {
+      return res.status(409).json({
+        success: false,
+        error: 'Ya existe un usuario con este email'
+      });
+    }
+
+    // Generar hash de la contraseña
+    const bcrypt = require('bcrypt');
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // Generar ID único
+    const usuarioId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+
+    const nuevoUsuario = await prisma.usuarios.create({
+      data: {
+        id: usuarioId,
+        nombre,
+        email,
+        password_hash: passwordHash,
+        documento,
+        tipo_documento,
+        rol,
+        municipio_id,
+        telefono,
+        activo,
+        fecha_creacion: new Date(),
+        fecha_actualizacion: new Date()
+      },
+      include: {
+        municipios: true
+      }
+    });
+
+    console.log('✅ Usuario creado exitosamente:', nuevoUsuario.id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Usuario creado exitosamente',
+      data: {
+        id: nuevoUsuario.id,
+        nombre: nuevoUsuario.nombre,
+        email: nuevoUsuario.email,
+        documento: nuevoUsuario.documento,
+        rol: nuevoUsuario.rol,
+        municipio: nuevoUsuario.municipios?.nombre || null,
+        telefono: nuevoUsuario.telefono,
+        activo: nuevoUsuario.activo,
+        fechaCreacion: nuevoUsuario.fecha_creacion.toISOString().split('T')[0]
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creando usuario:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error creando usuario: ' + error.message
     });
   }
 });
