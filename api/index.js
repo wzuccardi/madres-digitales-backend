@@ -1169,6 +1169,27 @@ app.post('/api/alertas', async (req, res) => {
       });
     }
 
+    // Mapear tipo_alerta del frontend a valores del enum TipoAlerta
+    const tipoAlertaMap = {
+      'manual': 'SEGUIMIENTO',
+      'emergencia_obstetrica': 'EMERGENCIA',
+      'hipertension': 'SINTOMAS_PREOCUPANTES',
+      'preeclampsia': 'SINTOMAS_PREOCUPANTES',
+      'sepsis': 'EMERGENCIA',
+      'hemorragia': 'EMERGENCIA',
+      'shock_hipovolemico': 'EMERGENCIA',
+      'parto_prematuro': 'SINTOMAS_PREOCUPANTES',
+      'sos_medica': 'SOS_MEDICA',
+      'control_vencido': 'CONTROL_VENCIDO',
+      'recordatorio_control': 'RECORDATORIO_CONTROL'
+    };
+
+    // Convertir tipo_alerta a mayúsculas y mapear
+    const tipoAlertaNormalizado = tipoAlertaMap[tipo_alerta.toLowerCase()] || tipo_alerta.toUpperCase();
+
+    // Convertir nivel_prioridad a mayúsculas (BAJA, MEDIA, ALTA, CRITICA)
+    const nivelPrioridadNormalizado = nivel_prioridad.toUpperCase();
+
     // Verificar que la gestante existe y obtener datos completos
     const gestante = await prisma.gestantes.findUnique({
       where: { id: gestante_id },
@@ -1243,8 +1264,8 @@ app.post('/api/alertas', async (req, res) => {
         madrina_id: madrina_id || gestante.madrina_id,
         medico_asignado_id: medico_asignado_id || gestante.medico_tratante_id,
         ips_derivada_id: ips_derivada_id || gestante.ips_asignada_id,
-        tipo_alerta,
-        nivel_prioridad,
+        tipo_alerta: tipoAlertaNormalizado,
+        nivel_prioridad: nivelPrioridadNormalizado,
         mensaje: mensajeDescriptivo,
         sintomas,
         coordenadas_alerta,
