@@ -22,6 +22,8 @@ const corsOptions = {
       'https://madres-digitales.vercel.app',
       'https://madres-digitales-backend.vercel.app',
       'https://madres-digitales-backend-pp8vnv107-maildipablo22-4886s-projects.vercel.app',
+      'https://madres-digitales-backend-git-main-maildipablo22-4886s-projects.vercel.app',
+      'https://madres-digitales-backend-bgosxcyke-maildipablo22-4886s-projects.vercel.app',
       // Dominios de frontend de Vercel
       'https://madres-digitales-frontend-1bw6x2ir0.vercel.app',
       'https://madresdigitalesflutter-ncxd8av5c-maildipablo22-4886s-projects.vercel.app',
@@ -167,9 +169,21 @@ app.get('/health', (req, res) => {
 
 // Auth endpoints
 app.post('/api/auth/login', (req, res) => {
+  // Headers CORS directos para resolver problema temporal
+  const origin = req.headers.origin;
+  if (origin && (
+    origin.endsWith('.vercel.app') || 
+    origin.startsWith('http://localhost:')
+  )) {
+    res.header('Access-Control-Allow-Origin', origin);
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS,PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin,X-Requested-With,Content-Type,Accept,Authorization,Cache-Control');
+  }
+
   const { email, password } = req.body;
 
-  console.log('🔐 Login attempt:', { email, hasPassword: !!password });
+  console.log('🔐 Login attempt:', { email, hasPassword: !!password, origin });
 
   if (!email || !password) {
     return res.status(400).json({
