@@ -802,7 +802,9 @@ app.post('/api/medicos', async (req, res) => {
     } = req.body;
 
     console.log('👨‍⚕️ Creando nuevo médico...');
-    console.log('📋 Datos recibidos:', { nombre, documento, ips_id, municipio_id });
+    console.log('📋 Datos recibidos completos:', JSON.stringify(req.body, null, 2));
+    console.log('📋 IPS ID:', ips_id, 'Tipo:', typeof ips_id);
+    console.log('📋 Municipio ID:', municipio_id, 'Tipo:', typeof municipio_id);
 
     // Validaciones básicas
     if (!nombre || !documento) {
@@ -812,30 +814,41 @@ app.post('/api/medicos', async (req, res) => {
       });
     }
 
+    // Normalizar ips_id (convertir string vacío a null)
+    const normalizedIpsId = ips_id && ips_id.trim() !== '' ? ips_id : null;
+    const normalizedMunicipioId = municipio_id && municipio_id.trim() !== '' ? municipio_id : null;
+
+    console.log('📋 IPS ID normalizado:', normalizedIpsId);
+    console.log('📋 Municipio ID normalizado:', normalizedMunicipioId);
+
     // Validar que ips_id existe si se proporciona
-    if (ips_id) {
+    if (normalizedIpsId) {
       const ipsExists = await prisma.ips.findUnique({
-        where: { id: ips_id }
+        where: { id: normalizedIpsId }
       });
       if (!ipsExists) {
+        console.log('❌ IPS no encontrada:', normalizedIpsId);
         return res.status(400).json({
           success: false,
-          error: `La IPS con ID ${ips_id} no existe`
+          error: `La IPS con ID ${normalizedIpsId} no existe`
         });
       }
+      console.log('✅ IPS encontrada:', ipsExists.nombre);
     }
 
     // Validar que municipio_id existe si se proporciona
-    if (municipio_id) {
+    if (normalizedMunicipioId) {
       const municipioExists = await prisma.municipios.findUnique({
-        where: { id: municipio_id }
+        where: { id: normalizedMunicipioId }
       });
       if (!municipioExists) {
+        console.log('❌ Municipio no encontrado:', normalizedMunicipioId);
         return res.status(400).json({
           success: false,
-          error: `El municipio con ID ${municipio_id} no existe`
+          error: `El municipio con ID ${normalizedMunicipioId} no existe`
         });
       }
+      console.log('✅ Municipio encontrado:', municipioExists.nombre);
     }
 
     // Generar ID único
@@ -851,8 +864,8 @@ app.post('/api/medicos', async (req, res) => {
         especialidad: especialidad || null,
         email: email || null,
         registro_medico: registro_medico || null,
-        ips_id: ips_id || null,
-        municipio_id: municipio_id || null,
+        ips_id: normalizedIpsId,
+        municipio_id: normalizedMunicipioId,
         activo
       }
     });
