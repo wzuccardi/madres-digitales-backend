@@ -1,7 +1,7 @@
 // Madres Digitales API - Vercel Serverless Function
 // All service dependencies are in the api/ folder for Vercel deployment
 // Environment variables configured in Vercel dashboard
-// FORCE REDEPLOY: 2026-01-09 - Widget Puerperio Implementado - FIXED ROUTES
+// FORCE REDEPLOY: 2026-01-09 - Widget Puerperio Implementado
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -5409,6 +5409,28 @@ app.get('/api/reportes/madrinas', async (req, res) => {
   }
 });
 
+// 404 handler - ÚLTIMO: debe ir al final
+app.use('*', (req, res) => {
+  const auth = req.get('Authorization');
+  const origin = req.get('Origin');
+  console.error('❌ 404 - Ruta no encontrada', {
+    method: req.method,
+    url: req.originalUrl,
+    path: req.path,
+    origin,
+    hasAuthHeader: !!auth,
+    ip: req.ip,
+    timestamp: new Date().toISOString(),
+  });
+  res.status(404).json({
+    success: false,
+    error: 'Ruta no encontrada',
+    method: req.method,
+    path: req.originalUrl,
+    timestamp: new Date().toISOString()
+  });
+});
+
 
 // REPORTES - Resumen General
 // COMENTADO: Este endpoint está duplicado y sobrescribe el correcto definido arriba
@@ -5764,215 +5786,6 @@ app.get('/api/puerperio/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Error obteniendo registro de puerperio: ' + error.message
-    });
-  }
-});
-
-// ENDPOINT PARA BACKUP COMPLETO DE BASE DE DATOS
-app.get('/api/admin/backup/download', async (req, res) => {
-  try {
-    console.log('🔄 Iniciando backup completo de la base de datos...');
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    
-    // Obtener todos los datos de todas las tablas usando consultas SQL directas
-    console.log('📥 Descargando usuarios...');
-    const usuarios = await prisma.$queryRaw`SELECT * FROM usuarios ORDER BY id`;
-    
-    console.log('📥 Descargando gestantes...');
-    const gestantes = await prisma.$queryRaw`SELECT * FROM gestantes ORDER BY id`;
-    
-    console.log('📥 Descargando controles prenatales...');
-    const controles = await prisma.$queryRaw`SELECT * FROM control_prenatal ORDER BY id`;
-    
-    console.log('📥 Descargando alertas...');
-    const alertas = await prisma.$queryRaw`SELECT * FROM alertas ORDER BY id`;
-    
-    console.log('📥 Descargando puerperio...');
-    const puerperio = await prisma.$queryRaw`SELECT * FROM puerperio ORDER BY id`;
-    
-    console.log('📥 Descargando municipios...');
-    const municipios = await prisma.$queryRaw`SELECT * FROM municipios ORDER BY id`;
-    
-    console.log('📥 Descargando IPS...');
-    const ips = await prisma.$queryRaw`SELECT * FROM ips ORDER BY id`;
-    
-    console.log('📥 Descargando médicos...');
-    const medicos = await prisma.$queryRaw`SELECT * FROM medicos ORDER BY id`;
-    
-    // Crear objeto de backup completo
-    const backup = {
-      metadata: {
-        fecha_backup: new Date().toISOString(),
-        version: '1.0.0',
-        tipo: 'backup_completo_base_datos',
-        total_registros: usuarios.length + gestantes.length + controles.length + 
-                        alertas.length + puerperio.length + municipios.length + 
-                        ips.length + medicos.length
-      },
-      resumen: {
-        usuarios: usuarios.length,
-        gestantes: gestantes.length,
-        control_prenatal: controles.length,
-        alertas: alertas.length,
-        puerperio: puerperio.length,
-        municipios: municipios.length,
-        ips: ips.length,
-        medicos: medicos.length
-      },
-      tablas: {
-        usuarios: usuarios,
-        gestantes: gestantes,
-        control_prenatal: controles,
-        alertas: alertas,
-        puerperio: puerperio,
-        municipios: municipios,
-        ips: ips,
-        medicos: medicos
-      }
-    };
-    
-    console.log('✅ Backup completo generado exitosamente');
-    console.log(`📊 Total registros: ${backup.metadata.total_registros}`);
-    console.log('📋 Resumen por tabla:');
-    Object.entries(backup.resumen).forEach(([tabla, count]) => {
-      console.log(`   ${tabla}: ${count} registros`);
-    });
-    
-    // Configurar headers para descarga
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="madres_digitales_backup_completo_${timestamp}.json"`);
-    
-    res.json(backup);
-    
-  } catch (error) {
-    console.error('❌ Error generando backup completo:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error generando backup completo: ' + error.message
-    });
-  }
-});
-
-// ENDPOINT PARA BACKUP COMPLETO (sin autenticación)
-app.get('/api/backup/completo', async (req, res) => {
-  try {
-    console.log('🔄 Generando backup completo de todas las tablas...');
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    
-    // Obtener todos los datos usando consultas SQL directas
-    const [usuarios, gestantes, controles, alertas, puerperio, municipios, ips, medicos] = await Promise.all([
-      prisma.$queryRaw`SELECT * FROM usuarios ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM gestantes ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM control_prenatal ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM alertas ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM puerperio ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM municipios ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM ips ORDER BY id`,
-      prisma.$queryRaw`SELECT * FROM medicos ORDER BY id`
-    ]);
-    
-    const backup = {
-      metadata: {
-        fecha_backup: new Date().toISOString(),
-        version: '1.0.0',
-        tipo: 'backup_completo_todas_tablas',
-        total_registros: usuarios.length + gestantes.length + controles.length + 
-                        alertas.length + puerperio.length + municipios.length + 
-                        ips.length + medicos.length
-      },
-      resumen: {
-        usuarios: usuarios.length,
-        gestantes: gestantes.length,
-        control_prenatal: controles.length,
-        alertas: alertas.length,
-        puerperio: puerperio.length,
-        municipios: municipios.length,
-        ips: ips.length,
-        medicos: medicos.length
-      },
-      tablas: {
-        usuarios: usuarios,
-        gestantes: gestantes,
-        control_prenatal: controles,
-        alertas: alertas,
-        puerperio: puerperio,
-        municipios: municipios,
-        ips: ips,
-        medicos: medicos
-      }
-    };
-    
-    console.log('✅ Backup completo generado exitosamente');
-    console.log(`📊 Total registros: ${backup.metadata.total_registros}`);
-    
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="backup_completo_${timestamp}.json"`);
-    
-    res.json(backup);
-    
-  } catch (error) {
-    console.error('❌ Error en backup completo:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error generando backup completo: ' + error.message
-    });
-  }
-});
-app.get('/api/backup/simple', async (req, res) => {
-  try {
-    console.log('🔄 Generando backup de estadísticas básicas...');
-    
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    
-    // Usar exactamente las mismas consultas que funcionan en puerperio/estadisticas
-    const totalGestantesActivas = await prisma.gestantes.count({
-      where: { activa: true }
-    });
-
-    const [totalRegistrosPuerperio, totalPuerperio, totalGestantesPuerperio] = await Promise.all([
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`,
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio WHERE estado = 'Puerperio'`,
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio WHERE estado = 'Gestante'`
-    ]);
-
-    const totalPuerperioTabla = Number(totalPuerperio[0]?.count || 0);
-    const totalGestantesPuerperioTabla = Number(totalGestantesPuerperio[0]?.count || 0);
-    const totalCombinado = totalGestantesActivas + totalPuerperioTabla + totalGestantesPuerperioTabla;
-    
-    const backup = {
-      fecha: new Date().toISOString(),
-      tipo: "backup_estadisticas_basicas",
-      datos: {
-        gestantes_activas: totalGestantesActivas,
-        puerperio_total: Number(totalRegistrosPuerperio[0]?.count || 0),
-        puerperio_estado: totalPuerperioTabla,
-        gestantes_en_puerperio: totalGestantesPuerperioTabla,
-        total_combinado: totalCombinado
-      },
-      widget_data: {
-        total_gestantes_activas: totalGestantesActivas,
-        total_puerperio: totalPuerperioTabla,
-        total_gestantes_puerperio: totalGestantesPuerperioTabla,
-        total_combinado: totalCombinado,
-        total_registros_puerperio: Number(totalRegistrosPuerperio[0]?.count || 0)
-      }
-    };
-    
-    console.log('✅ Backup de estadísticas generado exitosamente');
-    console.log(`📊 Datos: ${JSON.stringify(backup.datos)}`);
-    
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="backup_estadisticas_${timestamp}.json"`);
-    
-    res.json(backup);
-    
-  } catch (error) {
-    console.error('❌ Error en backup de estadísticas:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error generando backup de estadísticas: ' + error.message
     });
   }
 });
