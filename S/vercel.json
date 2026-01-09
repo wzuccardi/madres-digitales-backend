@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "aplicacionWZC/madres-digitales-backend/api/index.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": "aplicacionWZC/madres-digitales-backend/**"
+      }
     }
   ],
   "routes": [
@@ -12,6 +15,8 @@
       "dest": "aplicacionWZC/madres-digitales-backend/api/index.js"
     }
   ],
+  "installCommand": "cd aplicacionWZC/madres-digitales-backend && npm install",
+  "buildCommand": "cd aplicacionWZC/madres-digitales-backend && npx prisma generate --schema=prisma/schema.prisma",
   "env": {
     "NODE_ENV": "production"
   },

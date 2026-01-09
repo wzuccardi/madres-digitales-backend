@@ -1,31 +1,10 @@
 {
-  "name": "madres-digitales-backend",
+  "name": "madres-digitales-backend-root",
   "version": "1.0.0",
-  "main": "aplicacionWZC/madres-digitales-backend/api/index.js",
+  "private": true,
   "scripts": {
-    "dev": "node aplicacionWZC/madres-digitales-backend/api/index.js",
-    "build": "echo 'Build completed - no build step needed'",
-    "start": "node aplicacionWZC/madres-digitales-backend/api/index.js"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.10.0",
-    "axios": "^1.12.2",
-    "bcrypt": "^6.0.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
-    "exceljs": "^4.4.0",
-    "express": "^4.18.2",
-    "express-rate-limit": "^8.2.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "morgan": "^1.10.1",
-    "multer": "^1.4.5-lts.1",
-    "pdfkit": "^0.17.2",
-    "resend": "^6.5.2",
-    "socket.io": "^4.8.1",
-    "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
-    "xlsx": "^0.18.5"
+    "build": "cd aplicacionWZC/madres-digitales-backend && npm install && npx prisma generate --schema=prisma/schema.prisma",
+    "start": "cd aplicacionWZC/madres-digitales-backend && node api/index.js"
   },
   "engines": {
     "node": "20.x"
