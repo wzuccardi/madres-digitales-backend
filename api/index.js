@@ -3924,31 +3924,196 @@ app.post('/api/municipios/toggle-multiple', async (req, res) => {
   }
 });
 
-app.put('/api/municipios/:id/estado', async (req, res) => {
+// Endpoints adicionales de estadísticas - NUEVOS ENDPOINTS
+app.get('/api/alertas/estadisticas', async (req, res) => {
   try {
-    const { id } = req.params;
-    const { activo } = req.body;
-    console.log('🔄 Cambiando estado de municipio:', id, 'activo:', activo);
+    console.log('📊 Obteniendo estadísticas de alertas...');
 
-    const municipio = await prisma.municipios.update({
-      where: { id },
-      data: { activo: !!activo }
-    });
+    const [totalAlertas, alertasActivas, alertasResueltas] = await Promise.all([
+      prisma.alertas.count(),
+      prisma.alertas.count({ where: { resuelta: false } }),
+      prisma.alertas.count({ where: { resuelta: true } })
+    ]);
+
+    const stats = {
+      total: totalAlertas,
+      activas: alertasActivas,
+      resueltas: alertasResueltas,
+      porcentajeResueltas: totalAlertas > 0 ? ((alertasResueltas / totalAlertas) * 100).toFixed(2) : 0
+    };
 
     res.json({
       success: true,
-      message: 'Estado del municipio actualizado',
-      data: {
-        id: municipio.id,
-        nombre: municipio.nombre,
-        activo: municipio.activo
-      }
+      data: stats
     });
   } catch (error) {
-    console.error('❌ Error cambiando estado de municipio:', error);
+    console.error('❌ Error obteniendo estadísticas de alertas:', error);
     res.status(500).json({
       success: false,
-      error: 'Error actualizando municipio: ' + error.message
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+app.get('/api/mensajes/estadisticas', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo estadísticas de mensajes...');
+
+    // Por ahora retornamos datos demo
+    const stats = {
+      total: 0,
+      enviados: 0,
+      recibidos: 0,
+      pendientes: 0
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de mensajes:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+app.get('/api/geolocalizacion/estadisticas', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo estadísticas de geolocalización...');
+
+    // Por ahora retornamos datos demo
+    const stats = {
+      total: 0,
+      activas: 0,
+      inactivas: 0
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de geolocalización:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+app.get('/api/alertas/sos/estadisticas', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo estadísticas de alertas SOS...');
+
+    // Por ahora retornamos datos demo
+    const stats = {
+      total: 0,
+      activas: 0,
+      resueltas: 0
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de SOS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+app.get('/api/admin/estadisticas/municipio/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('📊 Obteniendo estadísticas de municipio:', id);
+
+    const [totalGestantes, gestantesActivas] = await Promise.all([
+      prisma.gestantes.count({ where: { municipio_id: id } }),
+      prisma.gestantes.count({ where: { municipio_id: id, activa: true } })
+    ]);
+
+    const stats = {
+      municipio_id: id,
+      total_gestantes: totalGestantes,
+      gestantes_activas: gestantesActivas,
+      gestantes_inactivas: totalGestantes - gestantesActivas
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de municipio:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+app.get('/api/admin/estadisticas/ips/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('📊 Obteniendo estadísticas de IPS:', id);
+
+    const [totalMedicos, medicosActivos] = await Promise.all([
+      prisma.medicos.count({ where: { ips_id: id } }),
+      prisma.medicos.count({ where: { ips_id: id, activo: true } })
+    ]);
+
+    const stats = {
+      ips_id: id,
+      total_medicos: totalMedicos,
+      medicos_activos: medicosActivos,
+      medicos_inactivos: totalMedicos - medicosActivos
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de IPS:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+app.get('/api/admin/estadisticas/medico/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('📊 Obteniendo estadísticas de médico:', id);
+
+    const [totalGestantes, gestantesActivas] = await Promise.all([
+      prisma.gestantes.count({ where: { medico_tratante_id: id } }),
+      prisma.gestantes.count({ where: { medico_tratante_id: id, activa: true } })
+    ]);
+
+    const stats = {
+      medico_id: id,
+      total_gestantes: totalGestantes,
+      gestantes_activas: gestantesActivas,
+      gestantes_inactivas: totalGestantes - gestantesActivas
+    };
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de médico:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
     });
   }
 });
