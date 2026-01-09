@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "buildCommand": "chmod +x build.sh && ./build.sh",
+  "outputDirectory": "aplicacionWZC/madres_digitales_flutter_new/build/web",
+  "installCommand": "echo 'No install needed for Flutter'",
+  "env": {
+    "ENVIRONMENT": "production",
+    "API_URL": "https://madres-digitales-backend.vercel.app",
+    "BACKEND_URL": ""
+  },
+  "functions": {},
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}

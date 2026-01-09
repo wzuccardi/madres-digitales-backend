@@ -4,7 +4,7 @@
   "main": "api/index.js",
   "scripts": {
     "dev": "node api/index.js",
-    "build": "echo 'Build completed'",
+    "build": "echo 'Build completed - no build step needed'",
     "start": "node api/index.js",
     "vercel-build": "echo 'Vercel build completed'",
     "test": "echo 'No tests configured'"
