@@ -1,18 +1,16 @@
 {
   "name": "madres-digitales-backend",
   "version": "1.0.0",
-  "main": "aplicacionWZC/madres-digitales-backend/api/index.js",
+  "main": "api/index.js",
   "scripts": {
-    "dev": "node aplicacionWZC/madres-digitales-backend/api/index.js",
+    "dev": "node api/index.js",
     "build": "echo 'Build completed'",
-    "start": "node aplicacionWZC/madres-digitales-backend/api/index.js",
+    "start": "node api/index.js",
     "vercel-build": "echo 'Vercel build completed'",
-    "postinstall": "echo 'Install completed'",
     "test": "echo 'No tests configured'"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
-    "@types/pdfkit": "^0.17.3",
     "axios": "^1.12.2",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
@@ -30,9 +28,6 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
     "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "prisma": "^5.10.0"
   },
   "engines": {
     "node": "20.x"
