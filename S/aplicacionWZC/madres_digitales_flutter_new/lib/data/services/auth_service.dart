@@ -21,7 +21,7 @@ class AuthService {
   Future<User> login(String email, String password) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/auth/login',
+        '/api/auth/login',
         data: {
           'email': email,
           'password': password,
@@ -58,7 +58,7 @@ class AuthService {
   }) async {
     try {
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/auth/register',
+        '/api/auth/register',
         data: {
           'email': email,
           'nombre': nombre,

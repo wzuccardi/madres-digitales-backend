@@ -5768,6 +5768,123 @@ app.get('/api/puerperio/:id', async (req, res) => {
   }
 });
 
+// ENDPOINT PARA BACKUP DE BASE DE DATOS
+app.get('/api/admin/backup/download', async (req, res) => {
+  try {
+    console.log('🔄 Iniciando descarga de backup de base de datos...');
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    
+    // Obtener todos los datos
+    const [usuarios, gestantes, controles, alertas, puerperio, municipios, ips, medicos] = await Promise.all([
+      prisma.usuarios.findMany(),
+      prisma.gestantes.findMany(),
+      prisma.control_prenatal.findMany(),
+      prisma.alertas.findMany(),
+      prisma.puerperio.findMany(),
+      prisma.municipios.findMany(),
+      prisma.ips.findMany(),
+      prisma.medicos.findMany()
+    ]);
+    
+    // Crear objeto de backup completo
+    const backup = {
+      metadata: {
+        fecha_backup: new Date().toISOString(),
+        version: '1.0.0',
+        total_registros: usuarios.length + gestantes.length + controles.length + 
+                        alertas.length + puerperio.length + municipios.length + 
+                        ips.length + medicos.length
+      },
+      tablas: {
+        usuarios: usuarios,
+        gestantes: gestantes,
+        control_prenatal: controles,
+        alertas: alertas,
+        puerperio: puerperio,
+        municipios: municipios,
+        ips: ips,
+        medicos: medicos
+      },
+      resumen: {
+        usuarios: usuarios.length,
+        gestantes: gestantes.length,
+        control_prenatal: controles.length,
+        alertas: alertas.length,
+        puerperio: puerperio.length,
+        municipios: municipios.length,
+        ips: ips.length,
+        medicos: medicos.length
+      }
+    };
+    
+    console.log('✅ Backup generado exitosamente');
+    console.log(`📊 Total registros: ${backup.metadata.total_registros}`);
+    
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="madres_digitales_backup_${timestamp}.json"`);
+    
+    res.json(backup);
+    
+  } catch (error) {
+    console.error('❌ Error generando backup:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generando backup: ' + error.message
+    });
+  }
+});
+
+// ENDPOINT PARA BACKUP SIMPLIFICADO (sin auth)
+app.get('/api/backup/simple', async (req, res) => {
+  try {
+    console.log('🔄 Generando backup simplificado...');
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    
+    // Obtener datos principales
+    const [gestantes, puerperio, usuarios] = await Promise.all([
+      prisma.gestantes.findMany({ where: { activa: true } }),
+      prisma.puerperio.findMany(),
+      prisma.usuarios.findMany({ where: { activo: true } })
+    ]);
+    
+    const backup = {
+      fecha: new Date().toISOString(),
+      resumen: {
+        gestantes_activas: gestantes.length,
+        registros_puerperio: puerperio.length,
+        usuarios_activos: usuarios.length,
+        total: gestantes.length + puerperio.length + usuarios.length
+      },
+      datos: {
+        gestantes: gestantes,
+        puerperio: puerperio,
+        usuarios: usuarios.map(u => ({
+          id: u.id,
+          nombre: u.nombre,
+          email: u.email,
+          rol: u.rol,
+          activo: u.activo
+        }))
+      }
+    };
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="backup_simple_${timestamp}.json"`);
+    
+    res.json(backup);
+    
+  } catch (error) {
+    console.error('❌ Error en backup simple:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generando backup simple: ' + error.message
+    });
+  }
+});
+
 // 404 handler - ÚLTIMO: debe ir al final
 app.use('*', (req, res) => {
   const auth = req.get('Authorization');

@@ -86,7 +86,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       AppLogger.info('Attempting sign in for email: $email');
 
       final response = await _apiService.post(
-        '/auth/login',
+        '/api/auth/login',
         data: {
           'email': email,
           'password': password,
@@ -120,7 +120,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       AppLogger.info('Attempting sign up for email: $email');
 
       final response = await _apiService.post(
-        '/auth/register',
+        '/api/auth/register',
         data: {
           'nombre': name,
           'email': email,

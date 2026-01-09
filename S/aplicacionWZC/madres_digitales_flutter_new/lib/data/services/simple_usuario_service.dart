@@ -29,7 +29,7 @@ class SimpleUsuarioService {
       
 
       final resp = await _api.post<Map<String, dynamic>>(
-        '/auth/register',
+        '/api/auth/register',
         data: createData,
       );
       if (resp.success && resp.data != null) {

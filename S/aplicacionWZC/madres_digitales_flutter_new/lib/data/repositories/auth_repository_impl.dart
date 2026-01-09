@@ -22,7 +22,7 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       AppLogger.info('Auth signIn start', context: {'email': email});
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/auth/login',
+        '/api/auth/login',
         data: {
           'email': email,
           'password': password,
@@ -105,7 +105,7 @@ class AuthRepositoryImpl implements AuthRepository {
       }
       
       final response = await _apiService.post<Map<String, dynamic>>(
-        '/auth/register',
+        '/api/auth/register',
         data: registerData,
       );
       if (!response.success) {
