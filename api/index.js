@@ -5836,61 +5836,53 @@ app.get('/api/admin/backup/download', async (req, res) => {
   }
 });
 
-// ENDPOINT PARA BACKUP SIMPLIFICADO (sin auth)
+// ENDPOINT PARA BACKUP SIMPLIFICADO (usando datos ya disponibles)
 app.get('/api/backup/simple', async (req, res) => {
   try {
-    console.log('🔄 Generando backup simplificado...');
+    console.log('🔄 Generando backup simplificado usando datos disponibles...');
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     
-    // Usar consultas SQL directas para evitar problemas con Prisma
-    const [gestantesResult, puerperioResult, usuariosResult] = await Promise.all([
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM gestantes WHERE activa = true`,
+    // Usar el mismo código que funciona en el endpoint de puerperio
+    const totalGestantesActivas = await prisma.gestantes.count({
+      where: { activa: true }
+    });
+
+    const [totalRegistrosPuerperio, totalPuerperio, totalGestantesPuerperio] = await Promise.all([
       prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`,
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM usuarios WHERE activo = true`
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio WHERE estado = 'Puerperio'`,
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio WHERE estado = 'Gestante'`
     ]);
-    
-    const gestantesCount = Number(gestantesResult[0]?.count || 0);
-    const puerperioCount = Number(puerperioResult[0]?.count || 0);
-    const usuariosCount = Number(usuariosResult[0]?.count || 0);
-    
-    // Obtener algunos datos de muestra
-    const gestantesSample = await prisma.$queryRaw`
-      SELECT id, nombre, documento, telefono, municipio_id, fecha_ultima_menstruacion, riesgo_alto
-      FROM gestantes 
-      WHERE activa = true 
-      ORDER BY created_at DESC 
-      LIMIT 10
-    `;
-    
-    const puerperioSample = await prisma.$queryRaw`
-      SELECT id, nombre, documento, municipio, madre_digital, estado, fecha_parto
-      FROM puerperio 
-      ORDER BY created_at DESC 
-      LIMIT 10
-    `;
+
+    const totalPuerperioTabla = Number(totalPuerperio[0]?.count || 0);
+    const totalGestantesPuerperioTabla = Number(totalGestantesPuerperio[0]?.count || 0);
+    const totalCombinado = totalGestantesActivas + totalPuerperioTabla + totalGestantesPuerperioTabla;
     
     const backup = {
       fecha: new Date().toISOString(),
       resumen: {
-        gestantes_activas: gestantesCount,
-        registros_puerperio: puerperioCount,
-        usuarios_activos: usuariosCount,
-        total: gestantesCount + puerperioCount + usuariosCount
+        gestantes_activas: totalGestantesActivas,
+        registros_puerperio: Number(totalRegistrosPuerperio[0]?.count || 0),
+        puerperio_estado: totalPuerperioTabla,
+        gestantes_puerperio: totalGestantesPuerperioTabla,
+        total_combinado: totalCombinado
       },
-      muestras: {
-        gestantes: gestantesSample,
-        puerperio: puerperioSample
+      estadisticas_widget: {
+        total_gestantes_activas: totalGestantesActivas,
+        total_puerperio: totalPuerperioTabla,
+        total_gestantes_puerperio: totalGestantesPuerperioTabla,
+        total_combinado: totalCombinado,
+        total_registros_puerperio: Number(totalRegistrosPuerperio[0]?.count || 0)
       },
-      estadisticas: {
-        total_gestantes_activas: gestantesCount,
-        total_puerperio: puerperioCount,
-        total_combinado: gestantesCount + puerperioCount
+      metadata: {
+        version: "1.0.0",
+        tipo: "backup_simplificado",
+        fuente: "api_estadisticas_puerperio"
       }
     };
     
     console.log('✅ Backup simplificado generado exitosamente');
-    console.log(`📊 Gestantes: ${gestantesCount}, Puerperio: ${puerperioCount}, Usuarios: ${usuariosCount}`);
+    console.log(`📊 Gestantes: ${totalGestantesActivas}, Puerperio: ${totalPuerperioTabla}, Total: ${totalCombinado}`);
     
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="backup_simple_${timestamp}.json"`);
