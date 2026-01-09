@@ -3695,6 +3695,264 @@ app.get('/api/reportes', (req, res) => {
   });
 });
 
+// Contenido endpoints - NUEVOS ENDPOINTS
+app.get('/api/contenido', async (req, res) => {
+  try {
+    console.log('📚 Obteniendo contenido educativo...');
+
+    const contenidos = await prisma.contenidos.findMany({
+      where: { activo: true },
+      orderBy: [
+        { destacado: 'desc' },
+        { fecha_creacion: 'desc' }
+      ]
+    });
+
+    const contenidosFormateados = contenidos.map(contenido => ({
+      id: contenido.id,
+      titulo: contenido.titulo,
+      descripcion: contenido.descripcion,
+      categoria: contenido.categoria,
+      tipo: contenido.tipo,
+      urlContenido: contenido.url_contenido,
+      urlImagen: contenido.url_imagen,
+      urlVideo: contenido.url_video,
+      duracionMinutos: contenido.duracion_minutos,
+      destacado: contenido.destacado,
+      nivel: contenido.nivel,
+      semanaGestacionInicio: contenido.semana_gestacion_inicio,
+      semanaGestacionFin: contenido.semana_gestacion_fin,
+      tags: contenido.tags,
+      fechaCreacion: contenido.fecha_creacion.toISOString().split('T')[0]
+    }));
+
+    console.log(`📚 Encontrados ${contenidosFormateados.length} contenidos`);
+
+    res.json({
+      success: true,
+      data: contenidosFormateados
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo contenido:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo contenido: ' + error.message
+    });
+  }
+});
+
+// Estadísticas de contenido - NUEVO ENDPOINT
+app.get('/api/contenido/estadisticas', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo estadísticas de contenido...');
+
+    const [totalContenidos, contenidosActivos, contenidosDestacados] = await Promise.all([
+      prisma.contenidos.count(),
+      prisma.contenidos.count({ where: { activo: true } }),
+      prisma.contenidos.count({ where: { activo: true, destacado: true } })
+    ]);
+
+    const stats = {
+      total: totalContenidos,
+      activos: contenidosActivos,
+      destacados: contenidosDestacados,
+      inactivos: totalContenidos - contenidosActivos
+    };
+
+    console.log('📊 Estadísticas de contenido:', stats);
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de contenido:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+// Progreso de contenido por usuario - NUEVO ENDPOINT
+app.get('/api/contenido/:contenidoId/progreso', async (req, res) => {
+  try {
+    const { contenidoId } = req.params;
+    console.log('📈 Obteniendo progreso de contenido:', contenidoId);
+
+    // Por ahora retornamos datos demo
+    const progreso = {
+      contenidoId,
+      progreso: 0,
+      completado: false,
+      fechaInicio: null,
+      fechaCompletado: null
+    };
+
+    res.json({
+      success: true,
+      data: progreso
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo progreso de contenido:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo progreso: ' + error.message
+    });
+  }
+});
+
+// Progreso de contenido del usuario - NUEVO ENDPOINT
+app.get('/api/contenido/progreso/usuario', async (req, res) => {
+  try {
+    console.log('📈 Obteniendo progreso de contenido del usuario...');
+
+    // Por ahora retornamos array vacío
+    res.json({
+      success: true,
+      data: []
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo progreso del usuario:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo progreso: ' + error.message
+    });
+  }
+});
+
+// Endpoints adicionales de municipios - NUEVOS ENDPOINTS
+app.get('/api/municipios/integrados', async (req, res) => {
+  try {
+    console.log('🏛️ Obteniendo municipios integrados...');
+
+    const municipios = await prisma.municipios.findMany({
+      where: { activo: true },
+      orderBy: { nombre: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      data: municipios
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo municipios integrados:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo municipios: ' + error.message
+    });
+  }
+});
+
+app.get('/api/municipios/:id/detallado', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('🏛️ Obteniendo municipio detallado:', id);
+
+    const municipio = await prisma.municipios.findUnique({
+      where: { id }
+    });
+
+    if (!municipio) {
+      return res.status(404).json({
+        success: false,
+        error: 'Municipio no encontrado'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: municipio
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo municipio detallado:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo municipio: ' + error.message
+    });
+  }
+});
+
+app.get('/api/municipios/integrados/filtros', async (req, res) => {
+  try {
+    console.log('🏛️ Obteniendo municipios con filtros...');
+
+    const { activo, departamento } = req.query;
+    const whereClause = {};
+    
+    if (activo !== undefined) whereClause.activo = activo === 'true';
+    if (departamento) whereClause.departamento = departamento;
+
+    const municipios = await prisma.municipios.findMany({
+      where: whereClause,
+      orderBy: { nombre: 'asc' }
+    });
+
+    res.json({
+      success: true,
+      data: municipios
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo municipios filtrados:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo municipios: ' + error.message
+    });
+  }
+});
+
+app.post('/api/municipios/toggle-multiple', async (req, res) => {
+  try {
+    const { municipio_ids, activo } = req.body;
+    console.log('🔄 Cambiando estado de múltiples municipios:', municipio_ids, 'activo:', activo);
+
+    await prisma.municipios.updateMany({
+      where: { id: { in: municipio_ids } },
+      data: { activo: !!activo }
+    });
+
+    res.json({
+      success: true,
+      message: `${municipio_ids.length} municipios actualizados`
+    });
+  } catch (error) {
+    console.error('❌ Error cambiando estado de municipios:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error actualizando municipios: ' + error.message
+    });
+  }
+});
+
+app.put('/api/municipios/:id/estado', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { activo } = req.body;
+    console.log('🔄 Cambiando estado de municipio:', id, 'activo:', activo);
+
+    const municipio = await prisma.municipios.update({
+      where: { id },
+      data: { activo: !!activo }
+    });
+
+    res.json({
+      success: true,
+      message: 'Estado del municipio actualizado',
+      data: {
+        id: municipio.id,
+        nombre: municipio.nombre,
+        activo: municipio.activo
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error cambiando estado de municipio:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error actualizando municipio: ' + error.message
+    });
+  }
+});
+
 // Aliases para compatibilidad con frontend
 app.get('/api/dashboard/statistics', async (req, res) => {
   try {
