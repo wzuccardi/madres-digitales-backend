@@ -49,29 +49,22 @@ try {
         Write-Host "📁 Archivo: $filepath" -ForegroundColor White
         Write-Host "📊 Información del backup:" -ForegroundColor Yellow
         
-        if ($backup.metadata) {
-            Write-Host "   Fecha: $($backup.metadata.fecha_backup)" -ForegroundColor Gray
-            Write-Host "   Total registros: $($backup.metadata.total_registros)" -ForegroundColor Gray
-            Write-Host ""
-            Write-Host "📋 Registros por tabla:" -ForegroundColor Yellow
-            $backup.resumen.PSObject.Properties | ForEach-Object {
-                Write-Host "   $($_.Name): $($_.Value)" -ForegroundColor Gray
-            }
-        } elseif ($backup.resumen) {
+        if ($backup.datos) {
             Write-Host "   Fecha: $($backup.fecha)" -ForegroundColor Gray
-            Write-Host "   Total registros: $($backup.resumen.total)" -ForegroundColor Gray
+            Write-Host "   Tipo: $($backup.tipo)" -ForegroundColor Gray
             Write-Host ""
-            Write-Host "📋 Registros:" -ForegroundColor Yellow
-            Write-Host "   Gestantes activas: $($backup.resumen.gestantes_activas)" -ForegroundColor Gray
-            Write-Host "   Registros puerperio: $($backup.resumen.registros_puerperio)" -ForegroundColor Gray
-            Write-Host "   Usuarios activos: $($backup.resumen.usuarios_activos)" -ForegroundColor Gray
+            Write-Host "📋 Estadísticas:" -ForegroundColor Yellow
+            Write-Host "   Gestantes activas: $($backup.datos.gestantes_activas)" -ForegroundColor Gray
+            Write-Host "   Registros puerperio: $($backup.datos.puerperio_total)" -ForegroundColor Gray
+            Write-Host "   Puerperio estado: $($backup.datos.puerperio_estado)" -ForegroundColor Gray
+            Write-Host "   Total combinado: $($backup.datos.total_combinado)" -ForegroundColor Gray
         }
         
         # Mostrar tamaño del archivo
         $fileSize = (Get-Item $filepath).Length
-        $fileSizeMB = [math]::Round($fileSize / 1MB, 2)
+        $fileSizeKB = [math]::Round($fileSize / 1KB, 2)
         Write-Host ""
-        Write-Host "💾 Tamaño del archivo: $fileSizeMB MB" -ForegroundColor Cyan
+        Write-Host "💾 Tamaño del archivo: $fileSizeKB KB" -ForegroundColor Cyan
         
     } else {
         Write-Host "❌ Error: Status Code $($response.StatusCode)" -ForegroundColor Red
@@ -90,8 +83,3 @@ try {
 
 Write-Host ""
 Write-Host "🏁 Proceso completado!" -ForegroundColor Green
-Write-Host ""
-Write-Host "💡 Uso:" -ForegroundColor White
-Write-Host "   .\descargar_backup.ps1                    # Backup simplificado" -ForegroundColor Gray
-Write-Host "   .\descargar_backup.ps1 -Tipo completo     # Backup completo (requiere auth)" -ForegroundColor Gray
-Write-Host "   .\descargar_backup.ps1 -OutputDir ./mis_backups  # Directorio personalizado" -ForegroundColor Gray

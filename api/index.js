@@ -5768,43 +5768,47 @@ app.get('/api/puerperio/:id', async (req, res) => {
   }
 });
 
-// ENDPOINT PARA BACKUP DE BASE DE DATOS
+// ENDPOINT PARA BACKUP COMPLETO DE BASE DE DATOS
 app.get('/api/admin/backup/download', async (req, res) => {
   try {
-    console.log('🔄 Iniciando descarga de backup de base de datos...');
+    console.log('🔄 Iniciando backup completo de la base de datos...');
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     
-    // Obtener todos los datos
-    const [usuarios, gestantes, controles, alertas, puerperio, municipios, ips, medicos] = await Promise.all([
-      prisma.usuarios.findMany(),
-      prisma.gestantes.findMany(),
-      prisma.control_prenatal.findMany(),
-      prisma.alertas.findMany(),
-      prisma.puerperio.findMany(),
-      prisma.municipios.findMany(),
-      prisma.ips.findMany(),
-      prisma.medicos.findMany()
-    ]);
+    // Obtener todos los datos de todas las tablas usando consultas SQL directas
+    console.log('📥 Descargando usuarios...');
+    const usuarios = await prisma.$queryRaw`SELECT * FROM usuarios ORDER BY id`;
+    
+    console.log('📥 Descargando gestantes...');
+    const gestantes = await prisma.$queryRaw`SELECT * FROM gestantes ORDER BY id`;
+    
+    console.log('📥 Descargando controles prenatales...');
+    const controles = await prisma.$queryRaw`SELECT * FROM control_prenatal ORDER BY id`;
+    
+    console.log('📥 Descargando alertas...');
+    const alertas = await prisma.$queryRaw`SELECT * FROM alertas ORDER BY id`;
+    
+    console.log('📥 Descargando puerperio...');
+    const puerperio = await prisma.$queryRaw`SELECT * FROM puerperio ORDER BY id`;
+    
+    console.log('📥 Descargando municipios...');
+    const municipios = await prisma.$queryRaw`SELECT * FROM municipios ORDER BY id`;
+    
+    console.log('📥 Descargando IPS...');
+    const ips = await prisma.$queryRaw`SELECT * FROM ips ORDER BY id`;
+    
+    console.log('📥 Descargando médicos...');
+    const medicos = await prisma.$queryRaw`SELECT * FROM medicos ORDER BY id`;
     
     // Crear objeto de backup completo
     const backup = {
       metadata: {
         fecha_backup: new Date().toISOString(),
         version: '1.0.0',
+        tipo: 'backup_completo_base_datos',
         total_registros: usuarios.length + gestantes.length + controles.length + 
                         alertas.length + puerperio.length + municipios.length + 
                         ips.length + medicos.length
-      },
-      tablas: {
-        usuarios: usuarios,
-        gestantes: gestantes,
-        control_prenatal: controles,
-        alertas: alertas,
-        puerperio: puerperio,
-        municipios: municipios,
-        ips: ips,
-        medicos: medicos
       },
       resumen: {
         usuarios: usuarios.length,
@@ -5815,28 +5819,107 @@ app.get('/api/admin/backup/download', async (req, res) => {
         municipios: municipios.length,
         ips: ips.length,
         medicos: medicos.length
+      },
+      tablas: {
+        usuarios: usuarios,
+        gestantes: gestantes,
+        control_prenatal: controles,
+        alertas: alertas,
+        puerperio: puerperio,
+        municipios: municipios,
+        ips: ips,
+        medicos: medicos
       }
     };
     
-    console.log('✅ Backup generado exitosamente');
+    console.log('✅ Backup completo generado exitosamente');
     console.log(`📊 Total registros: ${backup.metadata.total_registros}`);
+    console.log('📋 Resumen por tabla:');
+    Object.entries(backup.resumen).forEach(([tabla, count]) => {
+      console.log(`   ${tabla}: ${count} registros`);
+    });
     
     // Configurar headers para descarga
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="madres_digitales_backup_${timestamp}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="madres_digitales_backup_completo_${timestamp}.json"`);
     
     res.json(backup);
     
   } catch (error) {
-    console.error('❌ Error generando backup:', error);
+    console.error('❌ Error generando backup completo:', error);
     res.status(500).json({
       success: false,
-      error: 'Error generando backup: ' + error.message
+      error: 'Error generando backup completo: ' + error.message
     });
   }
 });
 
-// ENDPOINT PARA BACKUP SIMPLIFICADO (solo estadísticas básicas)
+// ENDPOINT PARA BACKUP COMPLETO (sin autenticación)
+app.get('/api/backup/completo', async (req, res) => {
+  try {
+    console.log('🔄 Generando backup completo de todas las tablas...');
+    
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    
+    // Obtener todos los datos usando consultas SQL directas
+    const [usuarios, gestantes, controles, alertas, puerperio, municipios, ips, medicos] = await Promise.all([
+      prisma.$queryRaw`SELECT * FROM usuarios ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM gestantes ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM control_prenatal ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM alertas ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM puerperio ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM municipios ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM ips ORDER BY id`,
+      prisma.$queryRaw`SELECT * FROM medicos ORDER BY id`
+    ]);
+    
+    const backup = {
+      metadata: {
+        fecha_backup: new Date().toISOString(),
+        version: '1.0.0',
+        tipo: 'backup_completo_todas_tablas',
+        total_registros: usuarios.length + gestantes.length + controles.length + 
+                        alertas.length + puerperio.length + municipios.length + 
+                        ips.length + medicos.length
+      },
+      resumen: {
+        usuarios: usuarios.length,
+        gestantes: gestantes.length,
+        control_prenatal: controles.length,
+        alertas: alertas.length,
+        puerperio: puerperio.length,
+        municipios: municipios.length,
+        ips: ips.length,
+        medicos: medicos.length
+      },
+      tablas: {
+        usuarios: usuarios,
+        gestantes: gestantes,
+        control_prenatal: controles,
+        alertas: alertas,
+        puerperio: puerperio,
+        municipios: municipios,
+        ips: ips,
+        medicos: medicos
+      }
+    };
+    
+    console.log('✅ Backup completo generado exitosamente');
+    console.log(`📊 Total registros: ${backup.metadata.total_registros}`);
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="backup_completo_${timestamp}.json"`);
+    
+    res.json(backup);
+    
+  } catch (error) {
+    console.error('❌ Error en backup completo:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error generando backup completo: ' + error.message
+    });
+  }
+});
 app.get('/api/backup/simple', async (req, res) => {
   try {
     console.log('🔄 Generando backup de estadísticas básicas...');
