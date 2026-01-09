@@ -5843,33 +5843,54 @@ app.get('/api/backup/simple', async (req, res) => {
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     
-    // Obtener datos principales
-    const [gestantes, puerperio, usuarios] = await Promise.all([
-      prisma.gestantes.findMany({ where: { activa: true } }),
-      prisma.puerperio.findMany(),
-      prisma.usuarios.findMany({ where: { activo: true } })
+    // Usar consultas SQL directas para evitar problemas con Prisma
+    const [gestantesResult, puerperioResult, usuariosResult] = await Promise.all([
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM gestantes WHERE activa = true`,
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`,
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM usuarios WHERE activo = true`
     ]);
+    
+    const gestantesCount = Number(gestantesResult[0]?.count || 0);
+    const puerperioCount = Number(puerperioResult[0]?.count || 0);
+    const usuariosCount = Number(usuariosResult[0]?.count || 0);
+    
+    // Obtener algunos datos de muestra
+    const gestantesSample = await prisma.$queryRaw`
+      SELECT id, nombre, documento, telefono, municipio_id, fecha_ultima_menstruacion, riesgo_alto
+      FROM gestantes 
+      WHERE activa = true 
+      ORDER BY created_at DESC 
+      LIMIT 10
+    `;
+    
+    const puerperioSample = await prisma.$queryRaw`
+      SELECT id, nombre, documento, municipio, madre_digital, estado, fecha_parto
+      FROM puerperio 
+      ORDER BY created_at DESC 
+      LIMIT 10
+    `;
     
     const backup = {
       fecha: new Date().toISOString(),
       resumen: {
-        gestantes_activas: gestantes.length,
-        registros_puerperio: puerperio.length,
-        usuarios_activos: usuarios.length,
-        total: gestantes.length + puerperio.length + usuarios.length
+        gestantes_activas: gestantesCount,
+        registros_puerperio: puerperioCount,
+        usuarios_activos: usuariosCount,
+        total: gestantesCount + puerperioCount + usuariosCount
       },
-      datos: {
-        gestantes: gestantes,
-        puerperio: puerperio,
-        usuarios: usuarios.map(u => ({
-          id: u.id,
-          nombre: u.nombre,
-          email: u.email,
-          rol: u.rol,
-          activo: u.activo
-        }))
+      muestras: {
+        gestantes: gestantesSample,
+        puerperio: puerperioSample
+      },
+      estadisticas: {
+        total_gestantes_activas: gestantesCount,
+        total_puerperio: puerperioCount,
+        total_combinado: gestantesCount + puerperioCount
       }
     };
+    
+    console.log('✅ Backup simplificado generado exitosamente');
+    console.log(`📊 Gestantes: ${gestantesCount}, Puerperio: ${puerperioCount}, Usuarios: ${usuariosCount}`);
     
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Content-Disposition', `attachment; filename="backup_simple_${timestamp}.json"`);
