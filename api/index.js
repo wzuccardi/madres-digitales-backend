@@ -1073,9 +1073,9 @@ app.post('/api/contenido', missingEndpoints.createContenido);
 app.put('/api/contenido/:id', missingEndpoints.updateContenido);
 app.delete('/api/contenido/:id', missingEndpoints.deleteContenido);
 
-// MUNICIPIOS - Endpoints de lectura
-app.get('/api/municipios', missingEndpoints.listMunicipios);
-app.get('/api/municipios/:id', missingEndpoints.getMunicipioById);
+// MUNICIPIOS - Endpoints de lectura (implementados más abajo)
+// app.get('/api/municipios', missingEndpoints.listMunicipios);
+// app.get('/api/municipios/:id', missingEndpoints.getMunicipioById);
 
 // IPS - listar y detalle mínimo
 app.get('/api/ips', async (req, res) => {
@@ -3533,6 +3533,145 @@ app.get('/api/municipios', async (req, res) => {
   }
 });
 
+// Obtener municipio por ID - NUEVO ENDPOINT
+app.get('/api/municipios/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('🏛️ Obteniendo municipio por ID:', id);
+
+    const municipio = await prisma.municipios.findUnique({
+      where: { id }
+    });
+
+    if (!municipio) {
+      return res.status(404).json({
+        success: false,
+        error: 'Municipio no encontrado'
+      });
+    }
+
+    const municipioFormateado = {
+      id: municipio.id,
+      nombre: municipio.nombre,
+      departamento: municipio.departamento,
+      codigo_dane: municipio.codigo_dane,
+      latitud: municipio.latitud,
+      longitud: municipio.longitud,
+      poblacion: municipio.poblacion,
+      activo: municipio.activo,
+      fechaCreacion: municipio.fecha_creacion.toISOString().split('T')[0]
+    };
+
+    console.log('🏛️ Municipio encontrado:', municipioFormateado.nombre);
+
+    res.json({
+      success: true,
+      data: municipioFormateado
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo municipio por ID:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo municipio: ' + error.message
+    });
+  }
+});
+
+// Estadísticas de municipios - NUEVO ENDPOINT
+app.get('/api/municipios/stats', async (req, res) => {
+  try {
+    console.log('📊 Obteniendo estadísticas de municipios...');
+
+    const [totalMunicipios, municipiosActivos, municipiosInactivos] = await Promise.all([
+      prisma.municipios.count(),
+      prisma.municipios.count({ where: { activo: true } }),
+      prisma.municipios.count({ where: { activo: false } })
+    ]);
+
+    const stats = {
+      total: totalMunicipios,
+      activos: municipiosActivos,
+      inactivos: municipiosInactivos,
+      porcentajeActivos: totalMunicipios > 0 ? ((municipiosActivos / totalMunicipios) * 100).toFixed(2) : 0
+    };
+
+    console.log('📊 Estadísticas de municipios:', stats);
+
+    res.json({
+      success: true,
+      data: stats
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo estadísticas de municipios:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error obteniendo estadísticas: ' + error.message
+    });
+  }
+});
+
+// Activar municipio - NUEVO ENDPOINT
+app.post('/api/municipios/:id/activar', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('✅ Activando municipio:', id);
+
+    const municipio = await prisma.municipios.update({
+      where: { id },
+      data: { activo: true }
+    });
+
+    console.log('✅ Municipio activado:', municipio.nombre);
+
+    res.json({
+      success: true,
+      message: 'Municipio activado exitosamente',
+      data: {
+        id: municipio.id,
+        nombre: municipio.nombre,
+        activo: municipio.activo
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error activando municipio:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error activando municipio: ' + error.message
+    });
+  }
+});
+
+// Desactivar municipio - NUEVO ENDPOINT
+app.post('/api/municipios/:id/desactivar', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('❌ Desactivando municipio:', id);
+
+    const municipio = await prisma.municipios.update({
+      where: { id },
+      data: { activo: false }
+    });
+
+    console.log('❌ Municipio desactivado:', municipio.nombre);
+
+    res.json({
+      success: true,
+      message: 'Municipio desactivado exitosamente',
+      data: {
+        id: municipio.id,
+        nombre: municipio.nombre,
+        activo: municipio.activo
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error desactivando municipio:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error desactivando municipio: ' + error.message
+    });
+  }
+});
+
 // Basic reports endpoint
 app.get('/api/reportes', (req, res) => {
   res.json({
@@ -4584,20 +4723,7 @@ app.get('/api/contenido', async (_req, res) => {
   res.json({ success: true, data: [] });
 });
 
-// Municipios - listado básico
-app.get('/api/municipios', async (_req, res) => {
-  try {
-    const list = await prisma.municipios.findMany({
-      where: { activo: true },
-      orderBy: { nombre: 'asc' },
-      select: { id: true, nombre: true, departamento: true, codigo_dane: true },
-    });
-    res.json({ success: true, data: list });
-  } catch (error) {
-    console.error('❌ Error listando municipios:', error);
-    res.status(500).json({ success: false, error: 'Error listando municipios' });
-  }
-});
+// Municipios - endpoint duplicado eliminado (usar el de línea ~3500)
 
 // Gestión de Municipios (solo super_admin)
 app.get('/api/municipios/admin', async (req, res) => {
