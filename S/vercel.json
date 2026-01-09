@@ -1,28 +1,38 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "npm run vercel-build",
+  "installCommand": "npm install",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "api/**"
+    }
+  },
+  "rewrites": [
     {
-      "src": "aplicacionWZC/madres-digitales-backend/api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": "aplicacionWZC/madres-digitales-backend/**"
-      }
+      "source": "/(.*)",
+      "destination": "/api/index.js"
     }
   ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "aplicacionWZC/madres-digitales-backend/api/index.js"
-    }
-  ],
-  "installCommand": "cd aplicacionWZC/madres-digitales-backend && npm install",
-  "buildCommand": "cd aplicacionWZC/madres-digitales-backend && npx prisma generate --schema=prisma/schema.prisma",
   "env": {
     "NODE_ENV": "production"
   },
-  "functions": {
-    "aplicacionWZC/madres-digitales-backend/api/index.js": {
-      "maxDuration": 30
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
     }
-  }
+  ]
 }
