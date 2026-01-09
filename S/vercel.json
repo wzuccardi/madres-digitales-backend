@@ -2,21 +2,21 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.js",
+      "src": "aplicacionWZC/madres-digitales-backend/api/index.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/(.*)",
-      "dest": "api/index.js"
+      "dest": "aplicacionWZC/madres-digitales-backend/api/index.js"
     }
   ],
   "env": {
     "NODE_ENV": "production"
   },
   "functions": {
-    "api/index.js": {
+    "aplicacionWZC/madres-digitales-backend/api/index.js": {
       "maxDuration": 30
     }
   }

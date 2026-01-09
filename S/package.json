@@ -1,13 +1,11 @@
 {
   "name": "madres-digitales-backend",
   "version": "1.0.0",
-  "main": "api/index.js",
+  "main": "aplicacionWZC/madres-digitales-backend/api/index.js",
   "scripts": {
-    "dev": "node api/index.js",
+    "dev": "node aplicacionWZC/madres-digitales-backend/api/index.js",
     "build": "echo 'Build completed - no build step needed'",
-    "start": "node api/index.js",
-    "vercel-build": "echo 'Vercel build completed'",
-    "test": "echo 'No tests configured'"
+    "start": "node aplicacionWZC/madres-digitales-backend/api/index.js"
   },
   "dependencies": {
     "@prisma/client": "^5.10.0",
