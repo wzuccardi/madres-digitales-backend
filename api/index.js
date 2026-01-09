@@ -1,7 +1,7 @@
 // Madres Digitales API - Vercel Serverless Function
 // All service dependencies are in the api/ folder for Vercel deployment
 // Environment variables configured in Vercel dashboard
-// FORCE REDEPLOY: 2026-01-09 - Widget Puerperio Implementado
+// FORCE REDEPLOY: 2026-01-09 - Widget Puerperio Implementado - FIXED ROUTES
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
