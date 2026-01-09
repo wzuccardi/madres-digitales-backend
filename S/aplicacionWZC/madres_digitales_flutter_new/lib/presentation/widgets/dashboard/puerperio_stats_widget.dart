@@ -5,7 +5,7 @@ import 'package:madres_digitales_flutter_new/core/providers/service_providers.da
 // Provider para las estadísticas de puerperio
 final puerperioStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final apiService = ref.read(apiServiceProvider);
-  final response = await apiService.get<Map<String, dynamic>>('/puerperio/estadisticas');
+  final response = await apiService.get<Map<String, dynamic>>('/api/puerperio/estadisticas');
   
   if (response.success && response.data != null) {
     return response.data!;

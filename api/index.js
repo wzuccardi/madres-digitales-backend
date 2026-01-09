@@ -5409,28 +5409,6 @@ app.get('/api/reportes/madrinas', async (req, res) => {
   }
 });
 
-// 404 handler - ÚLTIMO: debe ir al final
-app.use('*', (req, res) => {
-  const auth = req.get('Authorization');
-  const origin = req.get('Origin');
-  console.error('❌ 404 - Ruta no encontrada', {
-    method: req.method,
-    url: req.originalUrl,
-    path: req.path,
-    origin,
-    hasAuthHeader: !!auth,
-    ip: req.ip,
-    timestamp: new Date().toISOString(),
-  });
-  res.status(404).json({
-    success: false,
-    error: 'Ruta no encontrada',
-    method: req.method,
-    path: req.originalUrl,
-    timestamp: new Date().toISOString()
-  });
-});
-
 
 // REPORTES - Resumen General
 // COMENTADO: Este endpoint está duplicado y sobrescribe el correcto definido arriba

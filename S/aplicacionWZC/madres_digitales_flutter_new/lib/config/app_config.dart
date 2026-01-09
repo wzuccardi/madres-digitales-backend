@@ -22,7 +22,8 @@ class AppConfig {
 
   static String get backendBaseUrlEffective {
     final base = backendUrlPlainEnv.isNotEmpty ? backendUrlPlainEnv : backendBaseUrlProductionEnv;
-    return base.endsWith('/api') ? base : '$base/api';
+    // No agregar /api aquí porque se agrega en el endpoint específico
+    return base;
   }
   static String get backendBaseUrl => backendBaseUrlEffective;
   static String get webUrl => isLocalMode ? webUrlLocal : webUrlProduction;
