@@ -5836,14 +5836,14 @@ app.get('/api/admin/backup/download', async (req, res) => {
   }
 });
 
-// ENDPOINT PARA BACKUP SIMPLIFICADO (usando datos ya disponibles)
+// ENDPOINT PARA BACKUP SIMPLIFICADO (solo estadísticas básicas)
 app.get('/api/backup/simple', async (req, res) => {
   try {
-    console.log('🔄 Generando backup simplificado usando datos disponibles...');
+    console.log('🔄 Generando backup de estadísticas básicas...');
     
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     
-    // Usar el mismo código que funciona en el endpoint de puerperio
+    // Usar exactamente las mismas consultas que funcionan en puerperio/estadisticas
     const totalGestantesActivas = await prisma.gestantes.count({
       where: { activa: true }
     });
@@ -5860,40 +5860,36 @@ app.get('/api/backup/simple', async (req, res) => {
     
     const backup = {
       fecha: new Date().toISOString(),
-      resumen: {
+      tipo: "backup_estadisticas_basicas",
+      datos: {
         gestantes_activas: totalGestantesActivas,
-        registros_puerperio: Number(totalRegistrosPuerperio[0]?.count || 0),
+        puerperio_total: Number(totalRegistrosPuerperio[0]?.count || 0),
         puerperio_estado: totalPuerperioTabla,
-        gestantes_puerperio: totalGestantesPuerperioTabla,
+        gestantes_en_puerperio: totalGestantesPuerperioTabla,
         total_combinado: totalCombinado
       },
-      estadisticas_widget: {
+      widget_data: {
         total_gestantes_activas: totalGestantesActivas,
         total_puerperio: totalPuerperioTabla,
         total_gestantes_puerperio: totalGestantesPuerperioTabla,
         total_combinado: totalCombinado,
         total_registros_puerperio: Number(totalRegistrosPuerperio[0]?.count || 0)
-      },
-      metadata: {
-        version: "1.0.0",
-        tipo: "backup_simplificado",
-        fuente: "api_estadisticas_puerperio"
       }
     };
     
-    console.log('✅ Backup simplificado generado exitosamente');
-    console.log(`📊 Gestantes: ${totalGestantesActivas}, Puerperio: ${totalPuerperioTabla}, Total: ${totalCombinado}`);
+    console.log('✅ Backup de estadísticas generado exitosamente');
+    console.log(`📊 Datos: ${JSON.stringify(backup.datos)}`);
     
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="backup_simple_${timestamp}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="backup_estadisticas_${timestamp}.json"`);
     
     res.json(backup);
     
   } catch (error) {
-    console.error('❌ Error en backup simple:', error);
+    console.error('❌ Error en backup de estadísticas:', error);
     res.status(500).json({
       success: false,
-      error: 'Error generando backup simple: ' + error.message
+      error: 'Error generando backup de estadísticas: ' + error.message
     });
   }
 });
