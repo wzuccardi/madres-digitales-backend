@@ -6487,7 +6487,7 @@ app.get('/api/fix-usuarios', async (req, res) => {
       total: await prisma.usuarios.count(),
       activos: await prisma.usuarios.count({ where: { activo: true } }),
       inactivos: await prisma.usuarios.count({ where: { activo: false } }),
-      nulls: await prisma.usuarios.count({ where: { activo: null } })
+      nulls: await prisma.usuarios.count({ where: { activo: { equals: null } } })
     };
     
     console.log('📊 Estado antes:', estadoAntes);
@@ -6497,7 +6497,7 @@ app.get('/api/fix-usuarios', async (req, res) => {
       where: {
         OR: [
           { activo: false },
-          { activo: null }
+          { activo: { equals: null } }
         ]
       },
       data: {
@@ -6512,7 +6512,7 @@ app.get('/api/fix-usuarios', async (req, res) => {
       total: await prisma.usuarios.count(),
       activos: await prisma.usuarios.count({ where: { activo: true } }),
       inactivos: await prisma.usuarios.count({ where: { activo: false } }),
-      nulls: await prisma.usuarios.count({ where: { activo: null } })
+      nulls: await prisma.usuarios.count({ where: { activo: { equals: null } } })
     };
     
     console.log('📊 Estado después:', estadoDespues);
@@ -6538,7 +6538,7 @@ app.get('/api/debug/usuarios-activos', async (req, res) => {
     const totalUsuarios = await prisma.usuarios.count();
     const usuariosActivos = await prisma.usuarios.count({ where: { activo: true } });
     const usuariosInactivos = await prisma.usuarios.count({ where: { activo: false } });
-    const usuariosNull = await prisma.usuarios.count({ where: { activo: null } });
+    const usuariosNull = await prisma.usuarios.count({ where: { activo: { equals: null } } });
     
     // Obtener algunos usuarios de ejemplo
     const ejemploUsuarios = await prisma.usuarios.findMany({
