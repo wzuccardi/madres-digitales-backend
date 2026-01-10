@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Flutter App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-link {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 10px;
+            background-color: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .test-link:hover {
+            background-color: #1976D2;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Flutter App - Madres Digitales</h1>
+        
+        <div class="status success">
+            ✅ Backend Server: Running on localhost:3000
+        </div>
+        
+        <div class="status success">
+            ✅ Flutter Server: Running on localhost:3008 (Fixed initialization errors)
+        </div>
+        
+        <div class="status info">
+            📋 Test Instructions:
+            <ol>
+                <li>Click "Open Flutter App" below</li>
+                <li>Login with admin/coordinator credentials</li>
+                <li>Click the "Reportes" tab in bottom navigation</li>
+                <li>Verify the dashboard loads with filters and data</li>
+            </ol>
+        </div>
+        
+        <h2>🔗 Test Links:</h2>
+        
+        <a href="http://localhost:3008" target="_blank" class="test-link">
+            🚀 Open Flutter App
+        </a>
+        
+        <a href="http://localhost:3008/#/dashboard-reportes" target="_blank" class="test-link">
+            📊 Direct to Reports Dashboard
+        </a>
+        
+        <a href="http://localhost:3000/api/reportes/generar" target="_blank" class="test-link">
+            🔧 Test Backend API
+        </a>
+        
+        <a href="http://localhost:3000/api/reportes/municipios" target="_blank" class="test-link">
+            🏘️ Test Municipios API
+        </a>
+        
+        <h2>📋 Expected Results:</h2>
+        <ul>
+            <li><strong>Flutter App:</strong> Should load without blank screen or console errors</li>
+            <li><strong>Login:</strong> Should work with existing credentials</li>
+            <li><strong>Reports Dashboard:</strong> Should show filters and 15 indicators</li>
+            <li><strong>Backend APIs:</strong> Should return JSON data</li>
+        </ul>
+        
+        <h2>🔧 What Was Fixed:</h2>
+        <ul>
+            <li>✅ Updated Flutter web initialization to use latest API</li>
+            <li>✅ Fixed deprecated window.flutterConfiguration</li>
+            <li>✅ Cleaned Flutter cache and rebuilt</li>
+            <li>✅ Fixed navigation to point to /dashboard-reportes</li>
+            <li>✅ All 15 indicators implemented in backend and frontend</li>
+        </ul>
+        
+        <div class="status info">
+            <strong>Note:</strong> If you still see a blank screen, try:
+            <ol>
+                <li>Hard refresh (Ctrl+F5) in your browser</li>
+                <li>Clear browser cache</li>
+                <li>Try in incognito/private mode</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,8 +1,0 @@
-# Ignore build artifacts (too large for GitHub)
-build/
-
-# Keep only web build for Vercel
-!build/web/
-
-# Ignore dart tool cache
-.dart_tool/
