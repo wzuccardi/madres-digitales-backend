@@ -5137,7 +5137,7 @@ if (require.main === module) {
   const http = require('http');
   const server = http.createServer(app);
   try {
-  // 🔧 ENDPOINT TEMPORAL DE DEBUG - Verificar y corregir usuarios activos
+  // 🔧 ENDPOINT TEMPORAL DE DEBUG - Verificar y corregir usuarios activos (SIN AUTENTICACIÓN)
 app.get('/api/debug/usuarios-activos', async (req, res) => {
   try {
     // Verificar estado actual
@@ -5169,7 +5169,7 @@ app.get('/api/debug/usuarios-activos', async (req, res) => {
   }
 });
 
-// 🔧 ENDPOINT TEMPORAL DE DEBUG - Activar todos los usuarios
+// 🔧 ENDPOINT TEMPORAL DE DEBUG - Activar todos los usuarios (SIN AUTENTICACIÓN)
 app.post('/api/debug/activar-usuarios', async (req, res) => {
   try {
     // Actualizar todos los usuarios inactivos o null a activo = true
