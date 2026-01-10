@@ -5137,7 +5137,69 @@ if (require.main === module) {
   const http = require('http');
   const server = http.createServer(app);
   try {
-    const { Server } = require('socket.io');
+  // 🔧 ENDPOINT TEMPORAL DE DEBUG - Verificar y corregir usuarios activos
+app.get('/api/debug/usuarios-activos', async (req, res) => {
+  try {
+    // Verificar estado actual
+    const totalUsuarios = await prisma.usuarios.count();
+    const usuariosActivos = await prisma.usuarios.count({ where: { activo: true } });
+    const usuariosInactivos = await prisma.usuarios.count({ where: { activo: false } });
+    const usuariosNull = await prisma.usuarios.count({ where: { activo: null } });
+    
+    // Obtener algunos usuarios de ejemplo
+    const ejemploUsuarios = await prisma.usuarios.findMany({
+      select: { id: true, email: true, activo: true, fecha_creacion: true },
+      take: 10,
+      orderBy: { fecha_creacion: 'desc' }
+    });
+    
+    res.json({
+      success: true,
+      estadisticas: {
+        totalUsuarios,
+        usuariosActivos,
+        usuariosInactivos,
+        usuariosNull
+      },
+      ejemploUsuarios
+    });
+  } catch (error) {
+    console.error('❌ Error en debug usuarios activos:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 🔧 ENDPOINT TEMPORAL DE DEBUG - Activar todos los usuarios
+app.post('/api/debug/activar-usuarios', async (req, res) => {
+  try {
+    // Actualizar todos los usuarios inactivos o null a activo = true
+    const resultado = await prisma.usuarios.updateMany({
+      where: {
+        OR: [
+          { activo: false },
+          { activo: null }
+        ]
+      },
+      data: {
+        activo: true
+      }
+    });
+    
+    // Verificar el resultado
+    const usuariosActivos = await prisma.usuarios.count({ where: { activo: true } });
+    
+    res.json({
+      success: true,
+      message: `Se activaron ${resultado.count} usuarios`,
+      totalUsuariosActivos: usuariosActivos
+    });
+  } catch (error) {
+    console.error('❌ Error activando usuarios:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+  const { Server } = require('socket.io');
     const io = new Server(server, {
       cors: { origin: '*', methods: ['GET','POST'] },
       transports: ['websocket','polling']
