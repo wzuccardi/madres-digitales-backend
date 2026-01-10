@@ -6462,6 +6462,101 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
+// 🔧 ENDPOINT TEMPORAL - Dashboard statistics con logs detallados (SIN AUTH)
+app.get('/api/debug-dashboard-detailed', async (req, res) => {
+  try {
+    console.log('🔧 Debug dashboard detailed - simulando diferentes roles...');
+    
+    // Probar con diferentes roles
+    const roles = ['admin', 'superadmin', 'super_admin', 'madrina', 'coordinador'];
+    const resultados = {};
+    
+    for (const rol of roles) {
+      console.log(`\n🔍 Probando con rol: ${rol}`);
+      
+      // Construir filtros base según el rol del usuario
+      let gestanteWhere = { activa: true };
+      let controlWhere = {};
+      let alertaWhere = { resuelta: false };
+      
+      if (rol === 'madrina') {
+        // Las madrinas solo ven gestantes asignadas a ellas
+        gestanteWhere.madrina_id = 'test-madrina-id';
+        controlWhere.gestante = gestanteWhere;
+        alertaWhere.gestante = gestanteWhere;
+      }
+      
+      const [
+        totalGestantes,
+        totalMedicos,
+        totalIps,
+        totalUsuarios,
+        gestantesAltoRiesgo,
+        alertasActivas,
+        controlesRealizados,
+        controlesHoy
+      ] = await Promise.all([
+        prisma.gestantes.count({ where: gestanteWhere }),
+        prisma.medicos.count({ where: { activo: true } }),
+        prisma.ips.count({ where: { activo: true } }),
+        prisma.usuarios.count({ where: { activo: true } }),
+        prisma.gestantes.count({ where: { ...gestanteWhere, riesgo_alto: true } }),
+        prisma.alertas.count({ where: alertaWhere }),
+        prisma.control_prenatal.count({ where: { ...controlWhere, realizado: true } }),
+        prisma.control_prenatal.count({
+          where: {
+            ...controlWhere,
+            fecha_control: {
+              gte: new Date(new Date().setHours(0, 0, 0, 0)),
+              lt: new Date(new Date().setHours(23, 59, 59, 999))
+            }
+          }
+        })
+      ]);
+
+      const proximosCitas = await prisma.control_prenatal.count({
+        where: {
+          realizado: false,
+          fecha_control: {
+            gte: new Date(),
+            lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+          }
+        }
+      });
+
+      const estadisticas = {
+        totalGestantes,
+        controlesRealizados,
+        alertasActivas,
+        totalMedicos,
+        totalIps,
+        totalUsuarios,
+        gestantesAltoRiesgo,
+        controlesHoy,
+        proximosCitas
+      };
+      
+      resultados[rol] = estadisticas;
+      console.log(`📊 Estadísticas para ${rol}:`, estadisticas);
+    }
+
+    res.json({
+      success: true,
+      message: 'Estadísticas por rol',
+      resultados,
+      analisis: {
+        usuariosConsistentes: Object.values(resultados).every(r => r.totalUsuarios === 49),
+        gestantesVarian: new Set(Object.values(resultados).map(r => r.totalGestantes)).size > 1,
+        rolesConUsuarios49: Object.keys(resultados).filter(rol => resultados[rol].totalUsuarios === 49),
+        rolesConUsuarios0: Object.keys(resultados).filter(rol => resultados[rol].totalUsuarios === 0)
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error en debug dashboard detailed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Verificar token y rol del usuario actual
 app.get('/api/debug-token', async (req, res) => {
   try {
