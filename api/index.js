@@ -6253,7 +6253,7 @@ app.get('/api/puerperio/estadisticas', async (req, res) => {
         total_gestantes_activas: totalGestantesActivas,
         total_puerperio: gestantesEnPuerperio,
         total_gestantes_puerperio: 0, // Placeholder
-        total_combinado: totalGestantesActivas,
+        total_combinado: totalGestantesActivas + gestantesEnPuerperio,
         gestantes_alto_riesgo: gestantesAltoRiesgo,
         gestantes_proximas_parto: gestantesProximasParto
       },
@@ -6264,6 +6264,7 @@ app.get('/api/puerperio/estadisticas', async (req, res) => {
     console.log('✅ Estadísticas combinadas obtenidas exitosamente');
     console.log(`📊 Gestantes activas: ${estadisticas.resumen.total_gestantes_activas}`);
     console.log(`🤱 Gestantes en puerperio: ${estadisticas.resumen.total_puerperio}`);
+    console.log(`📈 Total combinado: ${estadisticas.resumen.total_combinado}`);
     console.log(`🚨 Gestantes alto riesgo: ${estadisticas.resumen.gestantes_alto_riesgo}`);
     console.log(`📅 Próximas al parto: ${estadisticas.resumen.gestantes_proximas_parto}`);
 
