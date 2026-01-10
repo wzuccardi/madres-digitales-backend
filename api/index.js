@@ -6462,6 +6462,167 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
+// 🔧 ENDPOINT TEMPORAL - Test con simulación de usuario admin
+app.get('/api/test-dashboard-admin', async (req, res) => {
+  try {
+    console.log('🔧 Testing dashboard statistics como admin...');
+    
+    // Simular usuario admin (sin filtros de madrina)
+    const user = { rol: 'superadmin', id: 'test-admin' };
+    
+    // Construir filtros base según el rol del usuario
+    let gestanteWhere = { activa: true };
+    let controlWhere = {};
+    let alertaWhere = { resuelta: false };
+    
+    // NO aplicar filtros de madrina para admin
+    console.log('🔍 Usuario simulado:', user);
+    console.log('🔍 Filtros aplicados:', { gestanteWhere, controlWhere, alertaWhere });
+    
+    const [
+      totalGestantes,
+      totalMedicos,
+      totalIps,
+      totalUsuarios,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      controlesHoy
+    ] = await Promise.all([
+      prisma.gestantes.count({ where: gestanteWhere }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } }),
+      prisma.usuarios.count({ where: { activo: true } }),
+      prisma.gestantes.count({ where: { ...gestanteWhere, riesgo_alto: true } }),
+      prisma.alertas.count({ where: alertaWhere }),
+      prisma.control_prenatal.count({ where: { ...controlWhere, realizado: true } }),
+      prisma.control_prenatal.count({
+        where: {
+          ...controlWhere,
+          fecha_control: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            lt: new Date(new Date().setHours(23, 59, 59, 999))
+          }
+        }
+      })
+    ]);
+
+    const proximosCitas = await prisma.control_prenatal.count({
+      where: {
+        realizado: false,
+        fecha_control: {
+          gte: new Date(),
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+      }
+    });
+
+    const estadisticas = {
+      totalGestantes,
+      controlesRealizados,
+      alertasActivas,
+      totalMedicos,
+      totalIps,
+      totalUsuarios,
+      gestantesAltoRiesgo,
+      controlesHoy,
+      proximosCitas
+    };
+
+    console.log('📊 Estadísticas como admin:', estadisticas);
+
+    res.json({ success: true, data: estadisticas, userRole: user.rol });
+  } catch (error) {
+    console.error('❌ Error en test dashboard admin:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 🔧 ENDPOINT TEMPORAL - Test con simulación de usuario madrina
+app.get('/api/test-dashboard-madrina', async (req, res) => {
+  try {
+    console.log('🔧 Testing dashboard statistics como madrina...');
+    
+    // Simular usuario madrina
+    const user = { rol: 'madrina', id: 'test-madrina-123' };
+    
+    // Construir filtros base según el rol del usuario
+    let gestanteWhere = { activa: true };
+    let controlWhere = {};
+    let alertaWhere = { resuelta: false };
+    
+    if (user && user.rol === 'madrina') {
+      // Las madrinas solo ven gestantes asignadas a ellas
+      gestanteWhere.madrina_id = user.id;
+      // Los controles y alertas deben filtrarse por gestantes de esa madrina
+      controlWhere.gestante = gestanteWhere;
+      alertaWhere.gestante = gestanteWhere;
+      
+      console.log('🔍 Aplicando filtros para madrina:', user.id);
+    }
+    
+    console.log('🔍 Usuario simulado:', user);
+    console.log('🔍 Filtros aplicados:', { gestanteWhere, controlWhere, alertaWhere });
+    
+    const [
+      totalGestantes,
+      totalMedicos,
+      totalIps,
+      totalUsuarios,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      controlesHoy
+    ] = await Promise.all([
+      prisma.gestantes.count({ where: gestanteWhere }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } }),
+      prisma.usuarios.count({ where: { activo: true } }), // Los usuarios NO se filtran por madrina
+      prisma.gestantes.count({ where: { ...gestanteWhere, riesgo_alto: true } }),
+      prisma.alertas.count({ where: alertaWhere }),
+      prisma.control_prenatal.count({ where: { ...controlWhere, realizado: true } }),
+      prisma.control_prenatal.count({
+        where: {
+          ...controlWhere,
+          fecha_control: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            lt: new Date(new Date().setHours(23, 59, 59, 999))
+          }
+        }
+      })
+    ]);
+
+    const proximosCitas = await prisma.control_prenatal.count({
+      where: {
+        realizado: false,
+        fecha_control: {
+          gte: new Date(),
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+      }
+    });
+
+    const estadisticas = {
+      totalGestantes,
+      controlesRealizados,
+      alertasActivas,
+      totalMedicos,
+      totalIps,
+      totalUsuarios,
+      gestantesAltoRiesgo,
+      controlesHoy,
+      proximosCitas
+    };
+
+    console.log('📊 Estadísticas como madrina:', estadisticas);
+
+    res.json({ success: true, data: estadisticas, userRole: user.rol });
+  } catch (error) {
+    console.error('❌ Error en test dashboard madrina:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Test dashboard statistics sin autenticación
 app.get('/api/test-dashboard-stats', async (req, res) => {
   try {
