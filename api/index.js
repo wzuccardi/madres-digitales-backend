@@ -5137,7 +5137,61 @@ if (require.main === module) {
   const http = require('http');
   const server = http.createServer(app);
   try {
-  // 🔧 ENDPOINT TEMPORAL DE DEBUG - Verificar y corregir usuarios activos (SIN AUTENTICACIÓN)
+  // 🔧 ENDPOINT TEMPORAL - Solución directa para usuarios activos
+app.get('/api/fix-usuarios', async (req, res) => {
+  try {
+    console.log('🔧 Iniciando corrección de usuarios activos...');
+    
+    // Paso 1: Verificar estado actual
+    const estadoAntes = {
+      total: await prisma.usuarios.count(),
+      activos: await prisma.usuarios.count({ where: { activo: true } }),
+      inactivos: await prisma.usuarios.count({ where: { activo: false } }),
+      nulls: await prisma.usuarios.count({ where: { activo: null } })
+    };
+    
+    console.log('📊 Estado antes:', estadoAntes);
+    
+    // Paso 2: Activar todos los usuarios
+    const resultado = await prisma.usuarios.updateMany({
+      where: {
+        OR: [
+          { activo: false },
+          { activo: null }
+        ]
+      },
+      data: {
+        activo: true
+      }
+    });
+    
+    console.log(`✅ Se actualizaron ${resultado.count} usuarios`);
+    
+    // Paso 3: Verificar estado después
+    const estadoDespues = {
+      total: await prisma.usuarios.count(),
+      activos: await prisma.usuarios.count({ where: { activo: true } }),
+      inactivos: await prisma.usuarios.count({ where: { activo: false } }),
+      nulls: await prisma.usuarios.count({ where: { activo: null } })
+    };
+    
+    console.log('📊 Estado después:', estadoDespues);
+    
+    res.json({
+      success: true,
+      message: 'Usuarios activados correctamente',
+      estadoAntes,
+      estadoDespues,
+      usuariosActualizados: resultado.count
+    });
+    
+  } catch (error) {
+    console.error('❌ Error corrigiendo usuarios:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 🔧 ENDPOINT TEMPORAL DE DEBUG - Verificar y corregir usuarios activos (SIN AUTENTICACIÓN)
 app.get('/api/debug/usuarios-activos', async (req, res) => {
   try {
     // Verificar estado actual
