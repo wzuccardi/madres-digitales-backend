@@ -6462,6 +6462,69 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
+// 🔧 ENDPOINT TEMPORAL - Verificar token y rol del usuario actual
+app.get('/api/debug-token', async (req, res) => {
+  try {
+    console.log('🔧 Debug token - Headers:', req.headers);
+    
+    // Extraer token de autorización del header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.json({ 
+        success: false, 
+        error: 'No hay token de autorización',
+        hasAuthHeader: !!authHeader,
+        authHeader: authHeader ? authHeader.substring(0, 20) + '...' : null
+      });
+    }
+    
+    const token = authHeader.substring(7);
+    
+    // Decodificar el token para obtener el usuario
+    let user;
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET, {
+        issuer: 'madres-digitales',
+        audience: 'madres-digitales-users',
+      });
+      user = decoded;
+    } catch (error) {
+      return res.json({ 
+        success: false, 
+        error: 'Token inválido',
+        tokenError: error.message,
+        tokenStart: token.substring(0, 20) + '...'
+      });
+    }
+
+    // Buscar el usuario en la base de datos
+    const dbUser = await prisma.usuarios.findUnique({
+      where: { id: user.id },
+      select: { id: true, email: true, rol: true, activo: true, nombre: true }
+    });
+
+    res.json({
+      success: true,
+      tokenUser: user,
+      dbUser: dbUser,
+      isAdmin: user.rol === 'admin' || user.rol === 'superadmin' || user.rol === 'super_admin',
+      rolComparisons: {
+        tokenRol: user.rol,
+        dbRol: dbUser?.rol,
+        isTokenAdmin: user.rol === 'admin',
+        isTokenSuperAdmin: user.rol === 'superadmin',
+        isTokenSuperAdminUnderscore: user.rol === 'super_admin',
+        isDbAdmin: dbUser?.rol === 'admin',
+        isDbSuperAdmin: dbUser?.rol === 'superadmin',
+        isDbSuperAdminUnderscore: dbUser?.rol === 'super_admin'
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error en debug token:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Test con simulación de usuario admin
 app.get('/api/test-dashboard-admin', async (req, res) => {
   try {
