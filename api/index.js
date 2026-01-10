@@ -1,7 +1,7 @@
 // Madres Digitales API - Vercel Serverless Function
 // All service dependencies are in the api/ folder for Vercel deployment
 // Environment variables configured in Vercel dashboard
-// FORCE REDEPLOY: 2026-01-09 - Widget Puerperio Implementado
+// FORCE REDEPLOY: 2026-01-10 - Fix estructura directorio S/S/ eliminado
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -5956,28 +5956,6 @@ app.get('/api/reportes/madrinas', async (req, res) => {
       error: 'Error interno del servidor'
     });
   }
-});
-
-// 404 handler - ÚLTIMO: debe ir al final
-app.use('*', (req, res) => {
-  const auth = req.get('Authorization');
-  const origin = req.get('Origin');
-  console.error('❌ 404 - Ruta no encontrada', {
-    method: req.method,
-    url: req.originalUrl,
-    path: req.path,
-    origin,
-    hasAuthHeader: !!auth,
-    ip: req.ip,
-    timestamp: new Date().toISOString(),
-  });
-  res.status(404).json({
-    success: false,
-    error: 'Ruta no encontrada',
-    method: req.method,
-    path: req.originalUrl,
-    timestamp: new Date().toISOString()
-  });
 });
 
 
