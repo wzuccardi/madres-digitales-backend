@@ -6462,6 +6462,75 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
+// 🔧 ENDPOINT TEMPORAL - Test dashboard statistics sin autenticación
+app.get('/api/test-dashboard-stats', async (req, res) => {
+  try {
+    console.log('🔧 Testing dashboard statistics...');
+    
+    // Simular filtros como si fuera un admin (sin filtros de madrina)
+    let gestanteWhere = { activa: true };
+    let controlWhere = {};
+    let alertaWhere = { resuelta: false };
+    
+    const [
+      totalGestantes,
+      totalMedicos,
+      totalIps,
+      totalUsuarios,
+      gestantesAltoRiesgo,
+      alertasActivas,
+      controlesRealizados,
+      controlesHoy
+    ] = await Promise.all([
+      prisma.gestantes.count({ where: gestanteWhere }),
+      prisma.medicos.count({ where: { activo: true } }),
+      prisma.ips.count({ where: { activo: true } }),
+      prisma.usuarios.count({ where: { activo: true } }),
+      prisma.gestantes.count({ where: { ...gestanteWhere, riesgo_alto: true } }),
+      prisma.alertas.count({ where: alertaWhere }),
+      prisma.control_prenatal.count({ where: { ...controlWhere, realizado: true } }),
+      prisma.control_prenatal.count({
+        where: {
+          ...controlWhere,
+          fecha_control: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0)),
+            lt: new Date(new Date().setHours(23, 59, 59, 999))
+          }
+        }
+      })
+    ]);
+
+    const proximosCitas = await prisma.control_prenatal.count({
+      where: {
+        realizado: false,
+        fecha_control: {
+          gte: new Date(),
+          lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+      }
+    });
+
+    const estadisticas = {
+      totalGestantes,
+      controlesRealizados,
+      alertasActivas,
+      totalMedicos,
+      totalIps,
+      totalUsuarios,
+      gestantesAltoRiesgo,
+      controlesHoy,
+      proximosCitas
+    };
+
+    console.log('📊 Estadísticas calculadas:', estadisticas);
+
+    res.json({ success: true, data: estadisticas });
+  } catch (error) {
+    console.error('❌ Error en test dashboard stats:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Solución directa para usuarios activos
 app.get('/api/fix-usuarios', async (req, res) => {
   try {
