@@ -6486,19 +6486,23 @@ app.get('/api/fix-usuarios', async (req, res) => {
     const estadoAntes = {
       total: await prisma.usuarios.count(),
       activos: await prisma.usuarios.count({ where: { activo: true } }),
-      inactivos: await prisma.usuarios.count({ where: { activo: false } }),
-      nulls: await prisma.usuarios.count({ where: { activo: { equals: null } } })
+      inactivos: await prisma.usuarios.count({ where: { activo: false } })
     };
+    
+    // Para contar nulls, usar NOT (true OR false)
+    const totalUsuarios = estadoAntes.total;
+    const usuariosConValor = estadoAntes.activos + estadoAntes.inactivos;
+    const usuariosNull = totalUsuarios - usuariosConValor;
+    estadoAntes.nulls = usuariosNull;
     
     console.log('📊 Estado antes:', estadoAntes);
     
-    // Paso 2: Activar todos los usuarios
+    // Paso 2: Activar todos los usuarios que NO están activos
     const resultado = await prisma.usuarios.updateMany({
       where: {
-        OR: [
-          { activo: false },
-          { activo: { equals: null } }
-        ]
+        NOT: {
+          activo: true
+        }
       },
       data: {
         activo: true
@@ -6512,7 +6516,7 @@ app.get('/api/fix-usuarios', async (req, res) => {
       total: await prisma.usuarios.count(),
       activos: await prisma.usuarios.count({ where: { activo: true } }),
       inactivos: await prisma.usuarios.count({ where: { activo: false } }),
-      nulls: await prisma.usuarios.count({ where: { activo: { equals: null } } })
+      nulls: 0 // Después de la actualización no debería haber nulls
     };
     
     console.log('📊 Estado después:', estadoDespues);
@@ -6538,7 +6542,9 @@ app.get('/api/debug/usuarios-activos', async (req, res) => {
     const totalUsuarios = await prisma.usuarios.count();
     const usuariosActivos = await prisma.usuarios.count({ where: { activo: true } });
     const usuariosInactivos = await prisma.usuarios.count({ where: { activo: false } });
-    const usuariosNull = await prisma.usuarios.count({ where: { activo: { equals: null } } });
+    
+    // Calcular nulls indirectamente
+    const usuariosNull = totalUsuarios - usuariosActivos - usuariosInactivos;
     
     // Obtener algunos usuarios de ejemplo
     const ejemploUsuarios = await prisma.usuarios.findMany({
