@@ -6169,77 +6169,125 @@ app.get('/api/puerperio/estadisticas', async (req, res) => {
   try {
     console.log('🤱 Obteniendo estadísticas combinadas de gestantes y puerperio...');
 
+    // Verificar autenticación
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'No autorizado' });
+    }
+
+    const token = authHeader.substring(7);
+    let user;
+    try {
+      user = jwt.verify(token, JWT_SECRET, {
+        issuer: 'madres-digitales',
+        audience: 'madres-digitales-users',
+      });
+    } catch (error) {
+      return res.status(401).json({ success: false, error: 'Token inválido' });
+    }
+
+    // Construir filtros según el rol del usuario
+    let gestanteWhere = { activa: true };
+    
+    if (user && user.rol === 'madrina') {
+      gestanteWhere.madrina_id = user.id;
+    }
+
     // Obtener gestantes activas de la tabla principal
     const totalGestantesActivas = await prisma.gestantes.count({
-      where: { activa: true }
+      where: gestanteWhere
     });
 
-    // Estadísticas de la tabla puerperio
-    const [totalRegistrosPuerperio, totalPuerperio, totalGestantesPuerperio] = await Promise.all([
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`,
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio WHERE estado = 'Puerperio'`,
-      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio WHERE estado = 'Gestante'`
+    // Calcular gestantes en diferentes etapas basándose en fecha_probable_parto
+    const ahora = new Date();
+    const hace40Semanas = new Date();
+    hace40Semanas.setDate(ahora.getDate() - (40 * 7)); // 40 semanas atrás
+
+    const [gestantesEnPuerperio, gestantesProximasParto, gestantesAltoRiesgo] = await Promise.all([
+      // Gestantes que ya dieron a luz (fecha probable de parto pasada)
+      prisma.gestantes.count({
+        where: {
+          ...gestanteWhere,
+          fecha_probable_parto: {
+            lte: ahora
+          }
+        }
+      }),
+      // Gestantes próximas al parto (próximas 4 semanas)
+      prisma.gestantes.count({
+        where: {
+          ...gestanteWhere,
+          fecha_probable_parto: {
+            gte: ahora,
+            lte: new Date(ahora.getTime() + (4 * 7 * 24 * 60 * 60 * 1000)) // próximas 4 semanas
+          }
+        }
+      }),
+      // Gestantes de alto riesgo
+      prisma.gestantes.count({
+        where: {
+          ...gestanteWhere,
+          riesgo_alto: true
+        }
+      })
     ]);
 
-    // Calcular totales combinados
-    const totalGestantesTabla = totalGestantesActivas;
-    const totalPuerperioTabla = Number(totalPuerperio[0]?.count || 0);
-    const totalGestantesPuerperioTabla = Number(totalGestantesPuerperio[0]?.count || 0);
-    const totalCombinado = totalGestantesTabla + totalPuerperioTabla + totalGestantesPuerperioTabla;
+    // Estadísticas por municipio (solo si el usuario puede ver todos los datos)
+    let porMunicipio = [];
+    if (user.rol !== 'madrina') {
+      const municipiosStats = await prisma.gestantes.groupBy({
+        by: ['municipio_id'],
+        where: gestanteWhere,
+        _count: {
+          id: true
+        },
+        orderBy: {
+          _count: {
+            id: 'desc'
+          }
+        }
+      });
 
-    // Estadísticas por municipio
-    const porMunicipio = await prisma.$queryRaw`
-      SELECT 
-        municipio,
-        COUNT(*) as total,
-        COUNT(CASE WHEN estado = 'Puerperio' THEN 1 END) as puerperio,
-        COUNT(CASE WHEN estado = 'Gestante' THEN 1 END) as gestantes
-      FROM puerperio 
-      GROUP BY municipio 
-      ORDER BY total DESC
-    `;
+      // Obtener nombres de municipios
+      const municipiosIds = municipiosStats.map(stat => stat.municipio_id).filter(Boolean);
+      const municipios = await prisma.municipios.findMany({
+        where: {
+          id: { in: municipiosIds }
+        },
+        select: {
+          id: true,
+          nombre: true
+        }
+      });
 
-    // Estadísticas por madre digital
-    const porMadreDigital = await prisma.$queryRaw`
-      SELECT 
-        madre_digital,
-        municipio,
-        COUNT(*) as total,
-        COUNT(CASE WHEN estado = 'Puerperio' THEN 1 END) as puerperio,
-        COUNT(CASE WHEN estado = 'Gestante' THEN 1 END) as gestantes
-      FROM puerperio 
-      GROUP BY madre_digital, municipio 
-      ORDER BY total DESC
-    `;
+      const municipiosMap = new Map(municipios.map(m => [m.id, m.nombre]));
+
+      porMunicipio = municipiosStats.map(stat => ({
+        municipio: municipiosMap.get(stat.municipio_id) || 'Sin municipio',
+        total: stat._count.id,
+        puerperio: 0, // Placeholder - se puede calcular con lógica adicional
+        gestantes: stat._count.id
+      }));
+    }
 
     const estadisticas = {
       resumen: {
-        total_gestantes_activas: totalGestantesTabla,
-        total_puerperio: totalPuerperioTabla,
-        total_gestantes_puerperio: totalGestantesPuerperioTabla,
-        total_combinado: totalCombinado,
-        total_registros_puerperio: Number(totalRegistrosPuerperio[0]?.count || 0)
+        total_gestantes_activas: totalGestantesActivas,
+        total_puerperio: gestantesEnPuerperio,
+        total_gestantes_puerperio: 0, // Placeholder
+        total_combinado: totalGestantesActivas,
+        gestantes_alto_riesgo: gestantesAltoRiesgo,
+        gestantes_proximas_parto: gestantesProximasParto
       },
-      por_municipio: porMunicipio.map(item => ({
-        municipio: item.municipio,
-        total: Number(item.total),
-        puerperio: Number(item.puerperio),
-        gestantes: Number(item.gestantes)
-      })),
-      por_madre_digital: porMadreDigital.map(item => ({
-        madre_digital: item.madre_digital,
-        municipio: item.municipio,
-        total: Number(item.total),
-        puerperio: Number(item.puerperio),
-        gestantes: Number(item.gestantes)
-      }))
+      por_municipio: porMunicipio,
+      por_madre_digital: [] // Placeholder - se puede implementar si es necesario
     };
 
     console.log('✅ Estadísticas combinadas obtenidas exitosamente');
     console.log(`📊 Gestantes activas: ${estadisticas.resumen.total_gestantes_activas}`);
-    console.log(`🤱 Puerperio: ${estadisticas.resumen.total_puerperio}`);
-    console.log(`🤰 Gestantes (puerperio): ${estadisticas.resumen.total_gestantes_puerperio}`);
-    console.log(`📈 Total combinado: ${estadisticas.resumen.total_combinado}`);
+    console.log(`🤱 Gestantes en puerperio: ${estadisticas.resumen.total_puerperio}`);
+    console.log(`🚨 Gestantes alto riesgo: ${estadisticas.resumen.gestantes_alto_riesgo}`);
+    console.log(`📅 Próximas al parto: ${estadisticas.resumen.gestantes_proximas_parto}`);
 
     res.json({
       success: true,
@@ -6259,37 +6307,82 @@ app.get('/api/puerperio', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
-    const municipio = req.query.municipio;
-    const estado = req.query.estado;
 
-    let whereClause = '';
-    const params = [];
-
-    if (municipio) {
-      whereClause += ' WHERE municipio = $1';
-      params.push(municipio);
+    // Verificar autenticación
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'No autorizado' });
     }
 
-    if (estado) {
-      whereClause += municipio ? ' AND estado = $2' : ' WHERE estado = $1';
-      params.push(estado);
+    const token = authHeader.substring(7);
+    let user;
+    try {
+      user = jwt.verify(token, JWT_SECRET, {
+        issuer: 'madres-digitales',
+        audience: 'madres-digitales-users',
+      });
+    } catch (error) {
+      return res.status(401).json({ success: false, error: 'Token inválido' });
     }
 
-    const [data, totalResult] = await Promise.all([
-      prisma.$queryRawUnsafe(`
-        SELECT * FROM puerperio 
-        ${whereClause}
-        ORDER BY created_at DESC 
-        LIMIT ${limit} OFFSET ${offset}
-      `, ...params),
-      prisma.$queryRawUnsafe(`
-        SELECT COUNT(*) as count FROM puerperio 
-        ${whereClause}
-      `, ...params)
-    ]);
+    // Construir filtros según el rol del usuario
+    let gestanteWhere = { activa: true };
+    
+    if (user && user.rol === 'madrina') {
+      gestanteWhere.madrina_id = user.id;
+    }
 
-    const total = Number(totalResult[0]?.count || 0);
+    // Obtener gestantes que podrían estar en puerperio (fecha probable de parto pasada)
+    const ahora = new Date();
+    const gestantesEnPuerperio = await prisma.gestantes.findMany({
+      where: {
+        ...gestanteWhere,
+        fecha_probable_parto: {
+          lte: ahora
+        }
+      },
+      include: {
+        municipios: {
+          select: {
+            nombre: true
+          }
+        },
+        madrina: {
+          select: {
+            nombre: true
+          }
+        }
+      },
+      skip: offset,
+      take: limit,
+      orderBy: {
+        fecha_probable_parto: 'desc'
+      }
+    });
+
+    const total = await prisma.gestantes.count({
+      where: {
+        ...gestanteWhere,
+        fecha_probable_parto: {
+          lte: ahora
+        }
+      }
+    });
+
     const totalPages = Math.ceil(total / limit);
+
+    // Formatear datos para simular la estructura de puerperio
+    const data = gestantesEnPuerperio.map(gestante => ({
+      id: gestante.id,
+      nombre: gestante.nombre,
+      documento: gestante.documento,
+      telefono: gestante.telefono,
+      municipio: gestante.municipios?.nombre || 'Sin municipio',
+      madre_digital: gestante.madrina?.nombre || 'Sin asignar',
+      estado: 'Puerperio', // Asumimos que están en puerperio si pasó la fecha probable de parto
+      fecha_probable_parto: gestante.fecha_probable_parto,
+      created_at: gestante.fecha_creacion
+    }));
 
     res.json({
       success: true,
@@ -6314,21 +6407,71 @@ app.get('/api/puerperio', async (req, res) => {
 
 app.get('/api/puerperio/:id', async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
-    const puerperio = await prisma.$queryRaw`
-      SELECT * FROM puerperio WHERE id = ${id}
-    `;
+    const id = req.params.id;
 
-    if (!puerperio || puerperio.length === 0) {
+    // Verificar autenticación
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, error: 'No autorizado' });
+    }
+
+    const token = authHeader.substring(7);
+    let user;
+    try {
+      user = jwt.verify(token, JWT_SECRET, {
+        issuer: 'madres-digitales',
+        audience: 'madres-digitales-users',
+      });
+    } catch (error) {
+      return res.status(401).json({ success: false, error: 'Token inválido' });
+    }
+
+    // Buscar la gestante por ID
+    let gestanteWhere = { id: id };
+    
+    if (user && user.rol === 'madrina') {
+      gestanteWhere.madrina_id = user.id;
+    }
+
+    const gestante = await prisma.gestantes.findFirst({
+      where: gestanteWhere,
+      include: {
+        municipios: {
+          select: {
+            nombre: true
+          }
+        },
+        madrina: {
+          select: {
+            nombre: true
+          }
+        }
+      }
+    });
+
+    if (!gestante) {
       return res.status(404).json({
         success: false,
         error: 'Registro de puerperio no encontrado'
       });
     }
 
+    // Formatear datos para simular la estructura de puerperio
+    const data = {
+      id: gestante.id,
+      nombre: gestante.nombre,
+      documento: gestante.documento,
+      telefono: gestante.telefono,
+      municipio: gestante.municipios?.nombre || 'Sin municipio',
+      madre_digital: gestante.madrina?.nombre || 'Sin asignar',
+      estado: gestante.fecha_probable_parto && gestante.fecha_probable_parto <= new Date() ? 'Puerperio' : 'Gestante',
+      fecha_probable_parto: gestante.fecha_probable_parto,
+      created_at: gestante.fecha_creacion
+    };
+
     res.json({
       success: true,
-      data: puerperio[0]
+      data: data
     });
   } catch (error) {
     console.error('❌ Error obteniendo registro de puerperio:', error);
