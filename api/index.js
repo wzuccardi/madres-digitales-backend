@@ -4195,21 +4195,6 @@ app.get('/api/dashboard/statistics', async (req, res) => {
       })
     ]);
 
-    // 🔍 DEBUG: Verificar conteo de usuarios
-    console.log('🔍 DEBUG: Dashboard Statistics - totalUsuarios:', totalUsuarios);
-    
-    // Verificar usuarios en la base de datos
-    const usuariosActivos = await prisma.usuarios.findMany({ 
-      where: { activo: true },
-      select: { id: true, email: true, activo: true }
-    });
-    console.log('🔍 DEBUG: Dashboard Statistics - usuariosActivos:', usuariosActivos);
-    
-    const todosUsuarios = await prisma.usuarios.findMany({ 
-      select: { id: true, email: true, activo: true }
-    });
-    console.log('🔍 DEBUG: Dashboard Statistics - todosUsuarios:', todosUsuarios);
-
     const proximosCitas = await prisma.control_prenatal.count({
       where: {
         realizado: false,
