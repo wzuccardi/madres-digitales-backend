@@ -6541,6 +6541,50 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
+// 🔧 ENDPOINT TEMPORAL - Verificar si usuario existe
+app.get('/api/debug-user-exists', async (req, res) => {
+  try {
+    const email = req.query.email || 'wzuccardi@gmail.com';
+    
+    const user = await prisma.usuarios.findUnique({
+      where: { email },
+      select: { 
+        id: true, 
+        email: true, 
+        nombre: true, 
+        rol: true, 
+        activo: true,
+        password_hash: true 
+      }
+    });
+    
+    if (!user) {
+      return res.json({
+        success: false,
+        message: 'Usuario no encontrado',
+        email
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Usuario encontrado',
+      user: {
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        rol: user.rol,
+        activo: user.activo,
+        hasPassword: !!user.password_hash,
+        passwordHashStart: user.password_hash ? user.password_hash.substring(0, 20) + '...' : null
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error verificando usuario:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Dashboard statistics con logs detallados (SIN AUTH)
 app.get('/api/debug-dashboard-detailed', async (req, res) => {
   try {
