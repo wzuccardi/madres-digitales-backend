@@ -3460,14 +3460,6 @@ app.post('/api/auth/refresh', async (req, res) => {
     });
   }
 });
-  } catch (error) {
-    console.error('❌ Error renovando token:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Error renovando token: ' + error.message
-    });
-  }
-});
 
 // Auth logout endpoint - NUEVO ENDPOINT
 app.post('/api/auth/logout', async (req, res) => {
