@@ -203,16 +203,28 @@ const allowedOrigins = corsAllowedFromEnv.length > 0 ? corsAllowedFromEnv : defa
 
 const corsOptions = {
   origin: function (origin, callback) {
+    // Permitir requests sin origin (como apps móviles)
     if (!origin) return callback(null, true);
+    
+    // Permitir localhost en cualquier puerto
     if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
       return callback(null, true);
     }
+    
+    // Permitir orígenes en la lista
     if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked origin:', origin);
-      callback(new Error('No permitido por CORS'));
+      return callback(null, true);
     }
+    
+    // Permitir cualquier origen de Vercel
+    if (origin.includes('.vercel.app')) {
+      console.log('✅ CORS permitido para Vercel origin:', origin);
+      return callback(null, true);
+    }
+    
+    // Log pero permitir otros orígenes (modo permisivo temporal)
+    console.log('⚠️ CORS origin no en lista pero permitido:', origin);
+    callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
@@ -226,10 +238,15 @@ const corsOptions = {
     'X-Requested-With'
   ],
   exposedHeaders: ['X-Total-Count', 'X-Page-Count'],
-  maxAge: 86400
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
+
+// Handler explícito para OPTIONS (preflight)
+app.options('*', cors(corsOptions));
 
 // UTF-8 Encoding Configuration - IMPORTANTE PARA ESPAÑOL
 app.use(express.json({
