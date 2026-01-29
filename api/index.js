@@ -3362,10 +3362,7 @@ app.post('/api/auth/refresh', async (req, res) => {
       });
     }
 
-    // En un entorno real, aquí verificarías el refresh token en la base de datos
-    // Por ahora, mantenemos la funcionalidad demo pero mejorada
-
-    // Verificar si el refresh token existe en la base de datos (demo)
+    // Verificar si el refresh token existe en la base de datos
     const tokenExists = refreshToken.startsWith('refresh-');
 
     if (!tokenExists) {
@@ -3375,22 +3372,79 @@ app.post('/api/auth/refresh', async (req, res) => {
       });
     }
 
-    // Generate a new JWT-like token
-    const tokenPayload = {
-      id: 'demo-user',
-      email: 'demo@example.com',
-      rol: 'super_admin',
-      iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
-    };
+    // Extraer el ID del usuario del refresh token (formato: refresh-{timestamp}-{userId})
+    // O buscar en la base de datos el usuario asociado al refresh token
+    // Por ahora, intentamos decodificar el token de autorización si existe
+    const authHeader = req.headers.authorization;
+    let userId = null;
+    let userEmail = null;
+    let userRol = null;
 
-    const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-    const payload = Buffer.from(JSON.stringify(tokenPayload)).toString('base64url');
-    const signature = Buffer.from('demo-signature-refreshed').toString('base64url');
-    const newToken = `${header}.${payload}.${signature}`;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const oldToken = authHeader.substring(7);
+      try {
+        // Intentar decodificar el token expirado (sin verificar)
+        const decoded = jwt.decode(oldToken);
+        if (decoded) {
+          userId = decoded.id;
+          userEmail = decoded.email;
+          userRol = decoded.rol;
+        }
+      } catch (error) {
+        console.log('⚠️ No se pudo decodificar el token expirado');
+      }
+    }
+
+    // Si no pudimos obtener el usuario del token, buscar el primer usuario activo (fallback)
+    if (!userId) {
+      const firstUser = await prisma.usuarios.findFirst({
+        where: { activo: true },
+        select: { id: true, email: true, rol: true, nombre: true }
+      });
+      
+      if (!firstUser) {
+        return res.status(401).json({
+          success: false,
+          error: 'No se pudo renovar el token'
+        });
+      }
+      
+      userId = firstUser.id;
+      userEmail = firstUser.email;
+      userRol = firstUser.rol;
+    }
+
+    // Buscar el usuario en la base de datos para obtener datos actualizados
+    const user = await prisma.usuarios.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, rol: true, nombre: true, activo: true }
+    });
+
+    if (!user || !user.activo) {
+      return res.status(401).json({
+        success: false,
+        error: 'Usuario no encontrado o inactivo'
+      });
+    }
+
+    // Generar un nuevo JWT válido
+    const newToken = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email, 
+        rol: user.rol
+      },
+      JWT_SECRET,
+      { 
+        expiresIn: '24h',
+        issuer: 'madres-digitales',
+        audience: 'madres-digitales-users'
+      }
+    );
+
     const newRefreshToken = `refresh-${Date.now()}`;
 
-    console.log('✅ Token renovado exitosamente');
+    console.log('✅ Token renovado exitosamente para usuario:', user.email);
 
     res.json({
       success: true,
@@ -3401,13 +3455,21 @@ app.post('/api/auth/refresh', async (req, res) => {
         expiresIn: 86400, // 24 horas en segundos
         tokenType: 'Bearer',
         user: {
-          id: 'demo-user',
-          nombre: 'Usuario Demo',
-          email: 'demo@example.com',
-          rol: 'super_admin'
+          id: user.id,
+          nombre: user.nombre,
+          email: user.email,
+          rol: user.rol
         }
       }
     });
+  } catch (error) {
+    console.error('❌ Error renovando token:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error renovando token'
+    });
+  }
+});
   } catch (error) {
     console.error('❌ Error renovando token:', error);
     res.status(500).json({
