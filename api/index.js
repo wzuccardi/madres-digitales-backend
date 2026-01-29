@@ -1,7 +1,7 @@
 // Madres Digitales API - Vercel Serverless Function
 // All service dependencies are in the api/ folder for Vercel deployment
 // Environment variables configured in Vercel dashboard
-// FORCE REDEPLOY: 2026-01-10 07:11 - Fix manejador 404 duplicado eliminado
+// FORCE REDEPLOY: 2026-01-10 08:55 - Fix CORS y refresh token
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
