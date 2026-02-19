@@ -7116,6 +7116,36 @@ app.get('/api/debug/usuarios-activos', async (req, res) => {
   }
 });
 
+// 🔧 ENDPOINT TEMPORAL - Diagnosticar tabla puerperio (simple)
+app.get('/api/debug/diagnosticar-puerperio-simple', async (req, res) => {
+  try {
+    console.log('🔍 Diagnosticando tabla puerperio (simple)...');
+    
+    // Contar registros en puerperio
+    const countPuerperio = await prisma.$queryRaw`
+      SELECT COUNT(*) as count FROM puerperio
+    `;
+    
+    // Contar gestantes activas
+    const countGestantes = await prisma.gestantes.count({ where: { activa: true } });
+    
+    const totalPuerperio = Number(countPuerperio[0]?.count || 0);
+    const totalGeneral = countGestantes + totalPuerperio;
+    
+    res.json({
+      success: true,
+      gestantesActivas: countGestantes,
+      puerperio: totalPuerperio,
+      totalGeneral: totalGeneral,
+      registrosAEliminar: totalPuerperio - 87
+    });
+    
+  } catch (error) {
+    console.error('❌ Error diagnosticando puerperio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Diagnosticar tabla puerperio
 app.get('/api/debug/diagnosticar-puerperio', async (req, res) => {
   try {
