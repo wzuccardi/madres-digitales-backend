@@ -6226,15 +6226,8 @@ app.get('/api/puerperio/estadisticas', async (req, res) => {
     hace40Semanas.setDate(ahora.getDate() - (40 * 7)); // 40 semanas atrás
 
     const [gestantesEnPuerperio, gestantesProximasParto, gestantesAltoRiesgo] = await Promise.all([
-      // Gestantes que ya dieron a luz (fecha probable de parto pasada)
-      prisma.gestantes.count({
-        where: {
-          ...gestanteWhere,
-          fecha_probable_parto: {
-            lte: ahora
-          }
-        }
-      }),
+      // Contar registros de la tabla puerperio
+      prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`.then(result => Number(result[0]?.count || 0)),
       // Gestantes próximas al parto (próximas 4 semanas)
       prisma.gestantes.count({
         where: {
@@ -6307,7 +6300,7 @@ app.get('/api/puerperio/estadisticas', async (req, res) => {
 
     console.log('✅ Estadísticas combinadas obtenidas exitosamente');
     console.log(`📊 Gestantes activas: ${estadisticas.resumen.total_gestantes_activas}`);
-    console.log(`🤱 Gestantes en puerperio: ${estadisticas.resumen.total_puerperio}`);
+    console.log(`🤱 Puerperio (tabla separada): ${estadisticas.resumen.total_puerperio}`);
     console.log(`📈 Total combinado: ${estadisticas.resumen.total_combinado}`);
     console.log(`🚨 Gestantes alto riesgo: ${estadisticas.resumen.gestantes_alto_riesgo}`);
     console.log(`📅 Próximas al parto: ${estadisticas.resumen.gestantes_proximas_parto}`);
