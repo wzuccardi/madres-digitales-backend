@@ -7116,6 +7116,39 @@ app.get('/api/debug/usuarios-activos', async (req, res) => {
   }
 });
 
+// 🔧 ENDPOINT TEMPORAL - REVERTIR cambios incorrectos en gestantes
+app.post('/api/debug/revertir-cambios-gestantes', async (req, res) => {
+  try {
+    console.log('🔄 Revirtiendo cambios incorrectos en gestantes...');
+    
+    // Reactivar todas las gestantes que fueron desactivadas incorrectamente
+    const resultado = await prisma.gestantes.updateMany({
+      where: {
+        activa: false
+      },
+      data: {
+        activa: true,
+        fecha_actualizacion: new Date()
+      }
+    });
+    
+    console.log(`✅ Se reactivaron ${resultado.count} gestantes`);
+    
+    const gestantesActivas = await prisma.gestantes.count({ where: { activa: true } });
+    
+    res.json({
+      success: true,
+      message: 'Gestantes reactivadas correctamente',
+      gestantesReactivadas: resultado.count,
+      totalGestantesActivas: gestantesActivas
+    });
+    
+  } catch (error) {
+    console.error('❌ Error revirtiendo cambios:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Diagnosticar tabla puerperio (simple)
 app.get('/api/debug/diagnosticar-puerperio-simple', async (req, res) => {
   try {
