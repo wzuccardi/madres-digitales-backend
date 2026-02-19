@@ -6506,6 +6506,84 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
+// 🔧 ENDPOINT TEMPORAL - Ajustar puerperio a 87 registros
+app.post('/api/debug/ajustar-puerperio', async (req, res) => {
+  try {
+    console.log('🔧 Iniciando ajuste de registros de puerperio...');
+    
+    // Paso 1: Verificar estado actual
+    const estadoAntes = {
+      gestantesActivas: await prisma.gestantes.count({ where: { activa: true } }),
+      puerperio: await prisma.gestantes.count({ 
+        where: { activa: true, estado_puerperio: true } 
+      }),
+    };
+    estadoAntes.totalGeneral = estadoAntes.gestantesActivas;
+    
+    console.log('📊 Estado antes:', estadoAntes);
+    
+    // Paso 2: Obtener los 240 registros más antiguos de puerperio
+    const registrosADesactivar = await prisma.gestantes.findMany({
+      where: {
+        activa: true,
+        estado_puerperio: true,
+      },
+      orderBy: [
+        { fecha_parto: 'asc' },
+        { created_at: 'asc' },
+      ],
+      take: 240,
+      select: { id: true, nombre: true, fecha_parto: true },
+    });
+    
+    console.log(`📋 Registros a desactivar: ${registrosADesactivar.length}`);
+    
+    // Paso 3: Desactivar los registros
+    const idsADesactivar = registrosADesactivar.map(r => r.id);
+    
+    const resultado = await prisma.gestantes.updateMany({
+      where: {
+        id: { in: idsADesactivar },
+      },
+      data: {
+        activa: false,
+        updated_at: new Date(),
+      },
+    });
+    
+    console.log(`✅ Se desactivaron ${resultado.count} registros`);
+    
+    // Paso 4: Verificar estado después
+    const estadoDespues = {
+      gestantesActivas: await prisma.gestantes.count({ where: { activa: true } }),
+      puerperio: await prisma.gestantes.count({ 
+        where: { activa: true, estado_puerperio: true } 
+      }),
+      inactivas: await prisma.gestantes.count({ where: { activa: false } }),
+    };
+    estadoDespues.totalGeneral = estadoDespues.gestantesActivas;
+    
+    console.log('📊 Estado después:', estadoDespues);
+    
+    res.json({
+      success: true,
+      message: 'Ajuste de puerperio completado',
+      estadoAntes,
+      estadoDespues,
+      registrosDesactivados: resultado.count,
+      ejemplos: registrosADesactivar.slice(0, 5).map(r => ({
+        id: r.id,
+        nombre: r.nombre,
+        fecha_parto: r.fecha_parto,
+      })),
+    });
+    
+  } catch (error) {
+    console.error('❌ Error ajustando puerperio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 🔧 ENDPOINT TEMPORAL - Verificar si usuario existe
 app.get('/api/debug-user-exists', async (req, res) => {
   try {
