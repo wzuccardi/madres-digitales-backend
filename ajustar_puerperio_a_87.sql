@@ -8,7 +8,7 @@ WHERE activa = true;
 
 SELECT 'ANTES - Gestantes en puerperio' as descripcion, COUNT(*) as cantidad 
 FROM gestantes 
-WHERE activa = true AND estado_puerperio = true;
+WHERE activa = true AND fecha_probable_parto <= NOW();
 
 SELECT 'ANTES - Total general' as descripcion, COUNT(*) as cantidad 
 FROM gestantes 
@@ -21,12 +21,12 @@ SELECT
     COUNT(*) as cantidad
 FROM gestantes
 WHERE activa = true 
-  AND estado_puerperio = true
+  AND fecha_probable_parto <= NOW()
   AND id IN (
     SELECT id 
     FROM gestantes 
-    WHERE activa = true AND estado_puerperio = true
-    ORDER BY fecha_parto ASC NULLS FIRST, created_at ASC
+    WHERE activa = true AND fecha_probable_parto <= NOW()
+    ORDER BY fecha_probable_parto ASC NULLS FIRST, fecha_creacion ASC
     LIMIT 240
   );
 
@@ -34,14 +34,14 @@ WHERE activa = true
 -- (en lugar de eliminarlos, los marcamos como inactivos para mantener el historial)
 UPDATE gestantes
 SET activa = false,
-    updated_at = NOW()
+    fecha_actualizacion = NOW()
 WHERE activa = true 
-  AND estado_puerperio = true
+  AND fecha_probable_parto <= NOW()
   AND id IN (
     SELECT id 
     FROM gestantes 
-    WHERE activa = true AND estado_puerperio = true
-    ORDER BY fecha_parto ASC NULLS FIRST, created_at ASC
+    WHERE activa = true AND fecha_probable_parto <= NOW()
+    ORDER BY fecha_probable_parto ASC NULLS FIRST, fecha_creacion ASC
     LIMIT 240
   );
 
@@ -52,7 +52,7 @@ WHERE activa = true;
 
 SELECT 'DESPUÉS - Gestantes en puerperio' as descripcion, COUNT(*) as cantidad 
 FROM gestantes 
-WHERE activa = true AND estado_puerperio = true;
+WHERE activa = true AND fecha_probable_parto <= NOW();
 
 SELECT 'DESPUÉS - Total general' as descripcion, COUNT(*) as cantidad 
 FROM gestantes 
@@ -67,12 +67,11 @@ SELECT
     id,
     nombre,
     documento,
-    fecha_parto,
-    estado_puerperio,
+    fecha_probable_parto,
     activa,
-    created_at
+    fecha_creacion
 FROM gestantes 
 WHERE activa = false 
-  AND estado_puerperio = true
-ORDER BY updated_at DESC
+  AND fecha_probable_parto <= NOW()
+ORDER BY fecha_actualizacion DESC
 LIMIT 10;

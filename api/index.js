@@ -6511,11 +6511,16 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
   try {
     console.log('🔧 Iniciando ajuste de registros de puerperio...');
     
+    const ahora = new Date();
+    
     // Paso 1: Verificar estado actual
     const estadoAntes = {
       gestantesActivas: await prisma.gestantes.count({ where: { activa: true } }),
       puerperio: await prisma.gestantes.count({ 
-        where: { activa: true, estado_puerperio: true } 
+        where: { 
+          activa: true, 
+          fecha_probable_parto: { lte: ahora }
+        } 
       }),
     };
     estadoAntes.totalGeneral = estadoAntes.gestantesActivas;
@@ -6526,14 +6531,14 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
     const registrosADesactivar = await prisma.gestantes.findMany({
       where: {
         activa: true,
-        estado_puerperio: true,
+        fecha_probable_parto: { lte: ahora },
       },
       orderBy: [
-        { fecha_parto: 'asc' },
-        { created_at: 'asc' },
+        { fecha_probable_parto: 'asc' },
+        { fecha_creacion: 'asc' },
       ],
       take: 240,
-      select: { id: true, nombre: true, fecha_parto: true },
+      select: { id: true, nombre: true, fecha_probable_parto: true },
     });
     
     console.log(`📋 Registros a desactivar: ${registrosADesactivar.length}`);
@@ -6547,7 +6552,7 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
       },
       data: {
         activa: false,
-        updated_at: new Date(),
+        fecha_actualizacion: new Date(),
       },
     });
     
@@ -6557,7 +6562,10 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
     const estadoDespues = {
       gestantesActivas: await prisma.gestantes.count({ where: { activa: true } }),
       puerperio: await prisma.gestantes.count({ 
-        where: { activa: true, estado_puerperio: true } 
+        where: { 
+          activa: true, 
+          fecha_probable_parto: { lte: ahora }
+        } 
       }),
       inactivas: await prisma.gestantes.count({ where: { activa: false } }),
     };
@@ -6574,7 +6582,7 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
       ejemplos: registrosADesactivar.slice(0, 5).map(r => ({
         id: r.id,
         nombre: r.nombre,
-        fecha_parto: r.fecha_parto,
+        fecha_probable_parto: r.fecha_probable_parto,
       })),
     });
     
