@@ -7185,7 +7185,7 @@ app.post('/api/debug/ajustar-puerperio-v2', async (req, res) => {
     // Paso 4: Eliminar los registros de la tabla PUERPERIO
     const resultado = await prisma.$executeRaw`
       DELETE FROM puerperio 
-      WHERE id = ANY(${idsAEliminar}::text[])
+      WHERE id = ANY(${idsAEliminar}::integer[])
     `;
     
     console.log(`✅ Se eliminaron ${resultado} registros de PUERPERIO`);
