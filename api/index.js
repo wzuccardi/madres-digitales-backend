@@ -6506,92 +6506,6 @@ app.get('/api/puerperio/:id', async (req, res) => {
 });
 
 // 🔧 ENDPOINTS TEMPORALES DE DEBUG - DEBEN IR ANTES DEL 404 HANDLER
-// 🔧 ENDPOINT TEMPORAL - Ajustar puerperio a 87 registros
-app.post('/api/debug/ajustar-puerperio', async (req, res) => {
-  try {
-    console.log('🔧 Iniciando ajuste de registros de puerperio...');
-    
-    const ahora = new Date();
-    
-    // Paso 1: Verificar estado actual
-    const estadoAntes = {
-      gestantesActivas: await prisma.gestantes.count({ where: { activa: true } }),
-      puerperio: await prisma.gestantes.count({ 
-        where: { 
-          activa: true, 
-          fecha_probable_parto: { lte: ahora }
-        } 
-      }),
-    };
-    estadoAntes.totalGeneral = estadoAntes.gestantesActivas;
-    
-    console.log('📊 Estado antes:', estadoAntes);
-    
-    // Paso 2: Obtener los 240 registros más antiguos de puerperio
-    const registrosADesactivar = await prisma.gestantes.findMany({
-      where: {
-        activa: true,
-        fecha_probable_parto: { lte: ahora },
-      },
-      orderBy: [
-        { fecha_probable_parto: 'asc' },
-        { fecha_creacion: 'asc' },
-      ],
-      take: 240,
-      select: { id: true, nombre: true, fecha_probable_parto: true },
-    });
-    
-    console.log(`📋 Registros a desactivar: ${registrosADesactivar.length}`);
-    
-    // Paso 3: Desactivar los registros
-    const idsADesactivar = registrosADesactivar.map(r => r.id);
-    
-    const resultado = await prisma.gestantes.updateMany({
-      where: {
-        id: { in: idsADesactivar },
-      },
-      data: {
-        activa: false,
-        fecha_actualizacion: new Date(),
-      },
-    });
-    
-    console.log(`✅ Se desactivaron ${resultado.count} registros`);
-    
-    // Paso 4: Verificar estado después
-    const estadoDespues = {
-      gestantesActivas: await prisma.gestantes.count({ where: { activa: true } }),
-      puerperio: await prisma.gestantes.count({ 
-        where: { 
-          activa: true, 
-          fecha_probable_parto: { lte: ahora }
-        } 
-      }),
-      inactivas: await prisma.gestantes.count({ where: { activa: false } }),
-    };
-    estadoDespues.totalGeneral = estadoDespues.gestantesActivas;
-    
-    console.log('📊 Estado después:', estadoDespues);
-    
-    res.json({
-      success: true,
-      message: 'Ajuste de puerperio completado',
-      estadoAntes,
-      estadoDespues,
-      registrosDesactivados: resultado.count,
-      ejemplos: registrosADesactivar.slice(0, 5).map(r => ({
-        id: r.id,
-        nombre: r.nombre,
-        fecha_probable_parto: r.fecha_probable_parto,
-      })),
-    });
-    
-  } catch (error) {
-    console.error('❌ Error ajustando puerperio:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
 // 🔧 ENDPOINT TEMPORAL - Verificar si usuario existe
 app.get('/api/debug-user-exists', async (req, res) => {
   try {
@@ -7227,7 +7141,85 @@ app.get('/api/debug/diagnosticar-puerperio', async (req, res) => {
   }
 });
 
-// 🔧 ENDPOINT TEMPORAL - Ajustar puerperio a 87 registros
+// 🔧 ENDPOINT NUEVO - Ajustar SOLO tabla puerperio a 87 registros (v2)
+app.post('/api/debug/ajustar-puerperio-v2', async (req, res) => {
+  try {
+    console.log('🔧 [V2] Iniciando ajuste de SOLO tabla puerperio...');
+    
+    // Paso 1: Verificar estado actual
+    const countAntes = await prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`;
+    const totalAntes = Number(countAntes[0]?.count || 0);
+    const gestantesActivas = await prisma.gestantes.count({ where: { activa: true } });
+    
+    console.log(`📊 Estado antes: Gestantes=${gestantesActivas}, Puerperio=${totalAntes}, Total=${gestantesActivas + totalAntes}`);
+    
+    // Paso 2: Calcular cuántos registros eliminar de PUERPERIO
+    const registrosAEliminar = totalAntes - 87;
+    
+    if (registrosAEliminar <= 0) {
+      return res.json({
+        success: true,
+        message: 'No es necesario eliminar registros de puerperio',
+        estadoActual: {
+          gestantesActivas,
+          puerperio: totalAntes,
+          totalGeneral: gestantesActivas + totalAntes
+        }
+      });
+    }
+    
+    console.log(`📋 Se eliminarán ${registrosAEliminar} registros de la tabla PUERPERIO`);
+    
+    // Paso 3: Obtener los IDs de los registros más antiguos a eliminar de PUERPERIO
+    const registros = await prisma.$queryRaw`
+      SELECT id
+      FROM puerperio 
+      ORDER BY created_at ASC
+      LIMIT ${registrosAEliminar}
+    `;
+    
+    const idsAEliminar = registros.map(r => r.id);
+    
+    console.log(`🗑️ Eliminando ${idsAEliminar.length} registros de PUERPERIO...`);
+    
+    // Paso 4: Eliminar los registros de la tabla PUERPERIO
+    const resultado = await prisma.$executeRaw`
+      DELETE FROM puerperio 
+      WHERE id = ANY(${idsAEliminar}::text[])
+    `;
+    
+    console.log(`✅ Se eliminaron ${resultado} registros de PUERPERIO`);
+    
+    // Paso 5: Verificar estado después
+    const countDespues = await prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`;
+    const totalDespues = Number(countDespues[0]?.count || 0);
+    const gestantesDespues = await prisma.gestantes.count({ where: { activa: true } });
+    
+    console.log(`📊 Estado después: Gestantes=${gestantesDespues}, Puerperio=${totalDespues}, Total=${gestantesDespues + totalDespues}`);
+    
+    res.json({
+      success: true,
+      message: 'Ajuste de tabla puerperio completado - Gestantes NO fueron tocadas',
+      estadoAntes: {
+        gestantesActivas,
+        puerperio: totalAntes,
+        totalGeneral: gestantesActivas + totalAntes
+      },
+      estadoDespues: {
+        gestantesActivas: gestantesDespues,
+        puerperio: totalDespues,
+        totalGeneral: gestantesDespues + totalDespues
+      },
+      registrosEliminadosDePuerperio: resultado
+    });
+    
+  } catch (error) {
+    console.error('❌ Error ajustando puerperio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 🔧 ENDPOINT TEMPORAL - Ajustar puerperio a 87 registros (DEPRECADO - usar v2)
 app.post('/api/debug/ajustar-puerperio', async (req, res) => {
   try {
     console.log('🔧 Iniciando ajuste de registros de puerperio...');
