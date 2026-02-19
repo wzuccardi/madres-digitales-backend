@@ -7121,6 +7121,14 @@ app.get('/api/debug/diagnosticar-puerperio', async (req, res) => {
   try {
     console.log('🔍 Diagnosticando tabla puerperio...');
     
+    // Ver estructura de la tabla
+    const estructura = await prisma.$queryRaw`
+      SELECT column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_name = 'puerperio'
+      ORDER BY ordinal_position
+    `;
+    
     // Contar registros en puerperio
     const countPuerperio = await prisma.$queryRaw`
       SELECT COUNT(*) as count FROM puerperio
@@ -7129,12 +7137,12 @@ app.get('/api/debug/diagnosticar-puerperio', async (req, res) => {
     // Contar gestantes activas
     const countGestantes = await prisma.gestantes.count({ where: { activa: true } });
     
-    // Ver algunos registros de ejemplo de puerperio
+    // Ver algunos registros de ejemplo de puerperio (solo con *)
     const ejemplos = await prisma.$queryRaw`
-      SELECT id, nombre, documento, fecha_probable_parto, created_at 
+      SELECT * 
       FROM puerperio 
-      ORDER BY fecha_probable_parto ASC NULLS FIRST, created_at ASC
-      LIMIT 10
+      ORDER BY created_at ASC
+      LIMIT 5
     `;
     
     const totalPuerperio = Number(countPuerperio[0]?.count || 0);
@@ -7146,6 +7154,7 @@ app.get('/api/debug/diagnosticar-puerperio', async (req, res) => {
       puerperio: totalPuerperio,
       totalGeneral: totalGeneral,
       registrosAEliminar: totalPuerperio - 87,
+      estructura,
       ejemplosMasAntiguos: ejemplos
     });
     
@@ -7186,9 +7195,9 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
     
     // Paso 3: Obtener los IDs de los registros más antiguos a eliminar
     const registros = await prisma.$queryRaw`
-      SELECT id, nombre, fecha_probable_parto 
+      SELECT id
       FROM puerperio 
-      ORDER BY fecha_probable_parto ASC NULLS FIRST, created_at ASC
+      ORDER BY created_at ASC
       LIMIT ${registrosAEliminar}
     `;
     
@@ -7224,12 +7233,7 @@ app.post('/api/debug/ajustar-puerperio', async (req, res) => {
         puerperio: totalDespues,
         totalGeneral: gestantesDespues + totalDespues
       },
-      registrosEliminados: resultado,
-      ejemplosEliminados: registros.slice(0, 5).map(r => ({
-        id: r.id,
-        nombre: r.nombre,
-        fecha_probable_parto: r.fecha_probable_parto
-      }))
+      registrosEliminados: resultado
     });
     
   } catch (error) {
