@@ -7116,6 +7116,128 @@ app.get('/api/debug/usuarios-activos', async (req, res) => {
   }
 });
 
+// 🔧 ENDPOINT TEMPORAL - Diagnosticar tabla puerperio
+app.get('/api/debug/diagnosticar-puerperio', async (req, res) => {
+  try {
+    console.log('🔍 Diagnosticando tabla puerperio...');
+    
+    // Contar registros en puerperio
+    const countPuerperio = await prisma.$queryRaw`
+      SELECT COUNT(*) as count FROM puerperio
+    `;
+    
+    // Contar gestantes activas
+    const countGestantes = await prisma.gestantes.count({ where: { activa: true } });
+    
+    // Ver algunos registros de ejemplo de puerperio
+    const ejemplos = await prisma.$queryRaw`
+      SELECT id, nombre, documento, fecha_probable_parto, created_at 
+      FROM puerperio 
+      ORDER BY fecha_probable_parto ASC NULLS FIRST, created_at ASC
+      LIMIT 10
+    `;
+    
+    const totalPuerperio = Number(countPuerperio[0]?.count || 0);
+    const totalGeneral = countGestantes + totalPuerperio;
+    
+    res.json({
+      success: true,
+      gestantesActivas: countGestantes,
+      puerperio: totalPuerperio,
+      totalGeneral: totalGeneral,
+      registrosAEliminar: totalPuerperio - 87,
+      ejemplosMasAntiguos: ejemplos
+    });
+    
+  } catch (error) {
+    console.error('❌ Error diagnosticando puerperio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 🔧 ENDPOINT TEMPORAL - Ajustar puerperio a 87 registros
+app.post('/api/debug/ajustar-puerperio', async (req, res) => {
+  try {
+    console.log('🔧 Iniciando ajuste de registros de puerperio...');
+    
+    // Paso 1: Verificar estado actual
+    const countAntes = await prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`;
+    const totalAntes = Number(countAntes[0]?.count || 0);
+    const gestantesActivas = await prisma.gestantes.count({ where: { activa: true } });
+    
+    console.log(`📊 Estado antes: Gestantes=${gestantesActivas}, Puerperio=${totalAntes}, Total=${gestantesActivas + totalAntes}`);
+    
+    // Paso 2: Calcular cuántos registros eliminar
+    const registrosAEliminar = totalAntes - 87;
+    
+    if (registrosAEliminar <= 0) {
+      return res.json({
+        success: true,
+        message: 'No es necesario eliminar registros',
+        estadoActual: {
+          gestantesActivas,
+          puerperio: totalAntes,
+          totalGeneral: gestantesActivas + totalAntes
+        }
+      });
+    }
+    
+    console.log(`📋 Se eliminarán ${registrosAEliminar} registros más antiguos`);
+    
+    // Paso 3: Obtener los IDs de los registros más antiguos a eliminar
+    const registros = await prisma.$queryRaw`
+      SELECT id, nombre, fecha_probable_parto 
+      FROM puerperio 
+      ORDER BY fecha_probable_parto ASC NULLS FIRST, created_at ASC
+      LIMIT ${registrosAEliminar}
+    `;
+    
+    const idsAEliminar = registros.map(r => r.id);
+    
+    console.log(`🗑️ Eliminando ${idsAEliminar.length} registros...`);
+    
+    // Paso 4: Eliminar los registros
+    const resultado = await prisma.$executeRaw`
+      DELETE FROM puerperio 
+      WHERE id = ANY(${idsAEliminar}::text[])
+    `;
+    
+    console.log(`✅ Se eliminaron ${resultado} registros`);
+    
+    // Paso 5: Verificar estado después
+    const countDespues = await prisma.$queryRaw`SELECT COUNT(*) as count FROM puerperio`;
+    const totalDespues = Number(countDespues[0]?.count || 0);
+    const gestantesDespues = await prisma.gestantes.count({ where: { activa: true } });
+    
+    console.log(`📊 Estado después: Gestantes=${gestantesDespues}, Puerperio=${totalDespues}, Total=${gestantesDespues + totalDespues}`);
+    
+    res.json({
+      success: true,
+      message: 'Ajuste de puerperio completado',
+      estadoAntes: {
+        gestantesActivas,
+        puerperio: totalAntes,
+        totalGeneral: gestantesActivas + totalAntes
+      },
+      estadoDespues: {
+        gestantesActivas: gestantesDespues,
+        puerperio: totalDespues,
+        totalGeneral: gestantesDespues + totalDespues
+      },
+      registrosEliminados: resultado,
+      ejemplosEliminados: registros.slice(0, 5).map(r => ({
+        id: r.id,
+        nombre: r.nombre,
+        fecha_probable_parto: r.fecha_probable_parto
+      }))
+    });
+    
+  } catch (error) {
+    console.error('❌ Error ajustando puerperio:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // 404 handler - ÚLTIMO: debe ir al final
 app.use('*', (req, res) => {
   const auth = req.get('Authorization');
